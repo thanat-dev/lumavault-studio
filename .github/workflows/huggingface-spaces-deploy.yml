@@ -63,19 +63,41 @@ jobs:
           python -m pip install --quiet --upgrade huggingface_hub
           HF_SPACE_PATH="$HF_SPACE_PATH" HF_TOKEN="$HF_TOKEN" python - <<'PY'
           import os
+          from pathlib import Path
           from huggingface_hub import HfApi
+          from huggingface_hub.errors import HfHubHTTPError
 
           repo_id = os.environ["HF_SPACE_PATH"]
           token = os.environ["HF_TOKEN"]
           api = HfApi(token=token)
-          api.create_repo(
-              repo_id=repo_id,
-              repo_type="space",
-              space_sdk="docker",
-              exist_ok=True,
-          )
-          print(f"Ready to deploy Hugging Face Docker Space: {repo_id}")
+
+          def create_space(target_repo_id):
+              api.create_repo(
+                  repo_id=target_repo_id,
+                  repo_type="space",
+                  space_sdk="docker",
+                  exist_ok=True,
+              )
+              return target_repo_id
+
+          try:
+              resolved_repo_id = create_space(repo_id)
+          except HfHubHTTPError as error:
+              status = getattr(error.response, "status_code", None)
+              if status != 403:
+                  raise
+              user = api.whoami(token=token)["name"]
+              space_name = repo_id.split("/")[-1]
+              resolved_repo_id = create_space(f"{user}/{space_name}")
+              print(
+                  f"Requested namespace was not writable. "
+                  f"Using token owner namespace instead: {resolved_repo_id}"
+              )
+
+          Path("hf_space_path.txt").write_text(resolved_repo_id, encoding="utf-8")
+          print(f"Ready to deploy Hugging Face Docker Space: {resolved_repo_id}")
           PY
+          HF_SPACE_PATH="$(cat hf_space_path.txt)"
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
