@@ -1,5 +1,17 @@
 # Private Media Downloader
 
+Live static UI:
+
+```text
+https://thanat-dev.github.io/lumavault-studio/
+```
+
+Full Node + FFmpeg deployment guide:
+
+```text
+DEPLOY.md
+```
+
 โปรแกรมต้นแบบแบบ local-first สำหรับสกัดลิงก์ media จาก HTML/source ของหน้าที่ผู้ใช้มีสิทธิ์เข้าถึง แล้วดาวน์โหลดผ่านเครื่องของผู้ใช้เอง
 
 ## Run
