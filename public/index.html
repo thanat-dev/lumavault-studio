@@ -9,83 +9,77 @@
   <body>
     <nav class="navbar">
       <div class="nav-inner">
-        <a class="brand" href="/">
+        <a class="brand" href="/" aria-label="LumaVault Studio">
           <span class="brand-mark">LV</span>
           <span>LumaVault Studio</span>
         </a>
-        <div class="nav-links" aria-label="เมนูหลัก">
-          <a href="/">Facebook Video</a>
-          <a href="/">Reels</a>
-          <a href="/">Private Source</a>
-          <a href="/">Render</a>
-          <a href="/">ภาษาไทย</a>
-        </div>
+        <span class="nav-badge">Private Media Render</span>
       </div>
     </nav>
 
     <main class="shell">
-      <header class="hero">
-        <p class="eyebrow">Private Facebook Media Workspace</p>
-        <h1>ดาวน์โหลดวิดีโอส่วนตัวของ Facebook</h1>
-        <p>วิเคราะห์ source ที่คุณมีสิทธิ์เข้าถึง แล้วเลือกดาวน์โหลดหรือ Render เป็น MP4 / MP3 ได้ในเครื่องของคุณ</p>
-      </header>
-
-      <form class="steps" id="extractForm">
-        <label class="step">
-          <strong>1. ป้อน URL วิดีโอ Facebook ส่วนตัวที่คุณต้องการดาวน์โหลด</strong>
-          <div class="input-row">
-            <span class="input-icon">f</span>
-            <input
-              id="pageUrl"
-              type="url"
-              placeholder="ตัวอย่าง: https://www.facebook.com/share/v/1XVoQfUsuL/"
-              value="https://www.facebook.com/share/v/1XVoQfUsuL/"
-              autocomplete="off"
-            />
-          </div>
-        </label>
-
-        <label class="step">
-          <strong>2. คัดลอกลิงก์ด้านล่างและเปิดในแท็บบราวเซอร์ใหม่</strong>
-          <div class="input-row">
-            <span class="input-icon">▣</span>
-            <input id="sourceUrl" type="text" readonly />
-            <button class="mini" id="copySourceUrl" type="button">สำเนา</button>
-          </div>
-        </label>
-
-        <label class="step">
-          <strong>3. คัดลอกข้อมูลแหล่งที่มาทั้งหมดของหน้าและวางลงในกล่องด้านล่าง จากนั้นกดปุ่ม ดาวน์โหลด.</strong>
-          <textarea id="source" spellcheck="false" placeholder="วางข้อมูลต้นทางของหน้าทั้งหมดที่นี่..."></textarea>
-        </label>
-
-        <div class="actions">
-          <button class="primary" type="submit">ดาวน์โหลด</button>
-          <button class="secondary" id="clearBtn" type="button">ล้างข้อมูล</button>
-          <span class="status" id="status">พร้อมใช้งาน</span>
-        </div>
-      </form>
-
-      <section class="results" id="resultPanel" aria-live="polite" hidden>
-        <div class="video-card" id="videoCard"></div>
-
-        <div class="download-table">
-          <div class="tabs">
-            <button class="tab active" type="button" data-tab="mp4">MP4</button>
-            <button class="tab" type="button" data-tab="mp3">MP3</button>
-          </div>
-
-          <div class="table-head">
-            <strong>คุณภาพ</strong>
-            <strong>Render</strong>
-            <strong>ดาวน์โหลด</strong>
-          </div>
-
-          <div class="table-body" id="results"></div>
-        </div>
-
-        <button class="more" id="downloadMore" type="button">ดาวน์โหลดวิดีโอเพิ่มเติม</button>
+      <section class="hero" aria-labelledby="appTitle">
+        <p class="eyebrow">Facebook Private Video Downloader</p>
+        <h1 id="appTitle">ดาวน์โหลดและ Render วิดีโอส่วนตัว</h1>
+        <p>วางลิงก์ Facebook และ source ของหน้าที่คุณเข้าถึงได้ ระบบจะคัดตัวเลือกที่จำเป็นสำหรับดาวน์โหลดหรือ Render เป็น MP4 / MP3</p>
       </section>
+
+      <form class="workspace" id="extractForm">
+        <section class="input-panel" aria-label="ข้อมูลวิดีโอ">
+          <label class="field">
+            <span>URL วิดีโอ Facebook</span>
+            <div class="input-row">
+              <span class="input-icon">f</span>
+              <input
+                id="pageUrl"
+                type="url"
+                placeholder="https://www.facebook.com/share/v/..."
+                autocomplete="off"
+              />
+            </div>
+          </label>
+
+          <label class="field">
+            <span>ลิงก์เปิด Page Source</span>
+            <div class="input-row">
+              <span class="input-icon">⌘</span>
+              <input id="sourceUrl" type="text" readonly />
+              <button class="icon-action" id="copySourceUrl" type="button" title="คัดลอกลิงก์ source" aria-label="คัดลอกลิงก์ source">
+                Copy
+              </button>
+            </div>
+          </label>
+
+          <label class="field">
+            <span>วาง Source ทั้งหน้า</span>
+            <textarea id="source" spellcheck="false" placeholder="วางข้อมูล view-source ทั้งหมดที่นี่"></textarea>
+          </label>
+
+          <div class="submit-row">
+            <button class="primary" type="submit">วิเคราะห์วิดีโอ</button>
+            <span class="status" id="status">พร้อมใช้งาน</span>
+          </div>
+        </section>
+
+        <section class="result-panel" id="resultPanel" aria-live="polite" hidden>
+          <div class="video-card" id="videoCard"></div>
+
+          <div class="download-table">
+            <div class="tabs" role="tablist" aria-label="ชนิดไฟล์">
+              <button class="tab active" type="button" data-tab="mp4" role="tab">MP4</button>
+              <button class="tab" type="button" data-tab="mp3" role="tab">MP3</button>
+            </div>
+
+            <div class="table-head">
+              <strong>คุณภาพ</strong>
+              <strong>วิธีทำไฟล์</strong>
+              <strong>ดาวน์โหลด</strong>
+            </div>
+
+            <div class="table-body" id="results"></div>
+          </div>
+        </section>
+      </form>
     </main>
 
     <script src="/app.js" type="module"></script>

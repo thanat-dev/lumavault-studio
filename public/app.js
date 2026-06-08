@@ -6,9 +6,7 @@ const statusEl = document.querySelector("#status");
 const resultsEl = document.querySelector("#results");
 const resultPanel = document.querySelector("#resultPanel");
 const videoCard = document.querySelector("#videoCard");
-const clearBtn = document.querySelector("#clearBtn");
 const copySourceUrl = document.querySelector("#copySourceUrl");
-const downloadMore = document.querySelector("#downloadMore");
 const tabs = [...document.querySelectorAll(".tab")];
 
 let lastPayload = null;
@@ -73,9 +71,9 @@ function directRow(label, item) {
   return {
     type: item ? "direct" : "missing",
     quality: label,
-    render: "เลขที่",
+    render: "ลิงก์ตรง",
     url: item?.url || "",
-    note: item?.expiresAt ? `ลิงก์ชั่วคราว หมดอายุประมาณ ${new Date(item.expiresAt).toLocaleString()}` : "",
+    note: item?.expiresAt ? `หมดอายุประมาณ ${new Date(item.expiresAt).toLocaleString()}` : "",
   };
 }
 
@@ -83,11 +81,11 @@ function renderRow(label, width, sourceItem, outputType = "mp4") {
   return {
     type: "render",
     quality: label,
-    render: "ใช่",
+    render: "Render",
     sourceUrl: sourceItem?.url || "",
     width,
     outputType,
-    note: sourceItem ? "Render ด้วย FFmpeg จากไฟล์ต้นฉบับที่พบ" : "ไม่มีลิงก์ต้นฉบับที่ใช้ Render ได้",
+    note: sourceItem ? "ใช้ FFmpeg จากไฟล์ต้นฉบับที่พบ" : "ไม่พบไฟล์ต้นฉบับสำหรับ Render",
   };
 }
 
@@ -110,7 +108,7 @@ function buildMp3Rows(items) {
       {
         type: "direct",
         quality: "MP3",
-        render: "เลขที่",
+        render: "ลิงก์ตรง",
         url: audio.url,
         note: "",
       },
@@ -177,7 +175,7 @@ async function pollRender(jobId, button, note, progressBar) {
 
   const percent = job.progress || 1;
   button.textContent = `${percent}%`;
-  note.textContent = job.speed ? `Rendering... ${job.speed}` : job.message;
+  note.textContent = job.speed ? `Rendering ${job.speed}` : job.message;
   progressBar.hidden = false;
   progressBar.querySelector("span").style.width = `${percent}%`;
   setTimeout(() => {
@@ -192,13 +190,13 @@ async function pollRender(jobId, button, note, progressBar) {
 
 async function startRender(row, button, note, progressBar) {
   if (!row.sourceUrl) {
-    note.textContent = "ไม่มีลิงก์ต้นฉบับที่ใช้ Render ได้";
+    note.textContent = "ไม่พบไฟล์ต้นฉบับสำหรับ Render";
     return;
   }
 
   button.disabled = true;
   button.textContent = "0%";
-  note.textContent = "กำลังส่งงานให้ FFmpeg...";
+  note.textContent = "กำลังส่งงานให้ FFmpeg";
   progressBar.hidden = false;
   progressBar.classList.remove("error");
   progressBar.querySelector("span").style.width = "2%";
@@ -280,12 +278,11 @@ function renderRows(payload) {
       disabled.type = "button";
       disabled.disabled = true;
       disabled.textContent = "ไม่พบ";
-      note.textContent = "ไม่พบลิงก์ตรงคุณภาพนี้จาก source";
+      note.textContent = "ไม่พบลิงก์ตรงคุณภาพนี้";
       actionCell.append(disabled);
     }
 
-    actionCell.append(progress);
-    actionCell.append(note);
+    actionCell.append(progress, note);
     item.append(quality, render, actionCell);
     resultsEl.append(item);
   }
@@ -316,7 +313,7 @@ form.addEventListener("submit", async (event) => {
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error || "Analyze failed");
     render(payload);
-    setStatus((payload.items || []).some(isClientUsable) ? "พบลิงก์" : "ไม่พบลิงก์ที่ใช้ได้");
+    setStatus((payload.items || []).some(isClientUsable) ? "พบไฟล์ที่ใช้งานได้" : "ไม่พบไฟล์ที่ดาวน์โหลดได้");
   } catch (error) {
     resultPanel.hidden = false;
     videoCard.replaceChildren();
@@ -333,20 +330,6 @@ copySourceUrl.addEventListener("click", async () => {
   updateSourceUrl();
   await navigator.clipboard.writeText(sourceUrl.value);
   setStatus("คัดลอกแล้ว");
-});
-
-clearBtn.addEventListener("click", () => {
-  pageUrl.value = "";
-  source.value = "";
-  updateSourceUrl();
-  resultPanel.hidden = true;
-  setStatus("พร้อมใช้งาน");
-});
-
-downloadMore.addEventListener("click", () => {
-  source.value = "";
-  resultPanel.hidden = true;
-  source.focus();
 });
 
 tabs.forEach((tab) => {
