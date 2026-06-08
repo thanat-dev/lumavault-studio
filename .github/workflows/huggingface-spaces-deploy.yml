@@ -60,6 +60,23 @@ jobs:
             exit 1
           fi
 
+          python -m pip install --quiet --upgrade huggingface_hub
+          HF_SPACE_PATH="$HF_SPACE_PATH" HF_TOKEN="$HF_TOKEN" python - <<'PY'
+          import os
+          from huggingface_hub import HfApi
+
+          repo_id = os.environ["HF_SPACE_PATH"]
+          token = os.environ["HF_TOKEN"]
+          api = HfApi(token=token)
+          api.create_repo(
+              repo_id=repo_id,
+              repo_type="space",
+              space_sdk="docker",
+              exist_ok=True,
+          )
+          print(f"Ready to deploy Hugging Face Docker Space: {repo_id}")
+          PY
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git push --force "https://oauth2:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE_PATH}" HEAD:main
