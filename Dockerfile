@@ -12,8 +12,8 @@ RUN npm install --omit=dev --ignore-scripts
 COPY . .
 
 ENV NODE_ENV=production
-ENV PORT=4173
+ENV PORT=7860
 
-EXPOSE 4173
+EXPOSE 7860
 
 CMD ["npm", "start"]

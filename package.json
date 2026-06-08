@@ -1,8 +1,8 @@
 {
-  "name": "private-media-downloader",
+  "name": "lumavault-studio",
   "version": "0.1.0",
   "private": true,
-  "description": "Local-first media URL extractor and downloader for pages the user can access.",
+  "description": "Premium local-first Facebook media extractor, downloader, and FFmpeg render studio.",
   "type": "module",
   "scripts": {
     "start": "node server.js"

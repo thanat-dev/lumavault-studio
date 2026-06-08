@@ -1,0 +1,29 @@
+name: Deploy to Hugging Face Spaces
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout GitHub repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push Docker app to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE_REPO: ${{ secrets.HF_SPACE_REPO }}
+        run: |
+          if [ -z "$HF_TOKEN" ] || [ -z "$HF_SPACE_REPO" ]; then
+            echo "Missing HF_TOKEN or HF_SPACE_REPO repository secret."
+            echo "HF_SPACE_REPO example: https://huggingface.co/spaces/your-username/lumavault-studio"
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add hf "$HF_SPACE_REPO"
+          git push --force "https://oauth2:${HF_TOKEN}@${HF_SPACE_REPO#https://}" HEAD:main
