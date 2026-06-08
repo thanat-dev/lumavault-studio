@@ -1,5 +1,6 @@
 ---
 title: LumaVault Studio
+emoji: 📦
 colorFrom: emerald
 colorTo: cyan
 sdk: docker
