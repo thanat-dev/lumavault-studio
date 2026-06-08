@@ -1,56 +1,82 @@
-# Private Media Downloader
+---
+title: LumaVault Studio
+colorFrom: emerald
+colorTo: cyan
+sdk: docker
+app_port: 7860
+pinned: false
+license: mit
+---
 
-Live static UI:
+# LumaVault Studio
+
+Premium local-first Facebook media extraction, download, and FFmpeg render studio.
+
+## Live URLs
+
+Full server deployment with Node and FFmpeg:
+
+```text
+https://huggingface.co/spaces/Nash1372/lumavault-studio
+```
+
+Direct app endpoint:
+
+```text
+https://nash1372-lumavault-studio.hf.space
+```
+
+Static GitHub Pages UI:
 
 ```text
 https://thanat-dev.github.io/lumavault-studio/
 ```
 
-Full Node + FFmpeg deployment guide:
+## Features
 
-```text
-DEPLOY.md
-```
+- Paste a Facebook URL and page source that the user can access.
+- Extract direct MP4 and audio candidates.
+- Rank the best downloadable choice.
+- Render MP4 variants through FFmpeg.
+- Render MP3 audio.
+- Show render progress percentage and FFmpeg speed.
+- Run locally, on Docker, or on Hugging Face Spaces.
 
-โปรแกรมต้นแบบแบบ local-first สำหรับสกัดลิงก์ media จาก HTML/source ของหน้าที่ผู้ใช้มีสิทธิ์เข้าถึง แล้วดาวน์โหลดผ่านเครื่องของผู้ใช้เอง
-
-## Run
+## Local Run
 
 ```powershell
 npm start
 ```
 
-เปิดหน้าเว็บที่:
+Then open:
 
 ```text
 http://localhost:4173
 ```
 
-## Workflow
+## Deploy
 
-1. เปิดหน้าวิดีโอด้วยบัญชีที่มีสิทธิ์ดู
-2. เปิด page source แล้วคัดลอก HTML/source
-3. วาง URL หน้าเว็บและ source ลงในโปรแกรม
-4. กด `Analyze`
-5. เลือกรายการ media ที่พบ แล้วกด `Download`
+The GitHub workflow deploys this app to Hugging Face Spaces. Required repository secrets:
+
+```text
+HF_TOKEN
+HF_SPACE_REPO
+```
+
+`HF_SPACE_REPO` can be either:
+
+```text
+Nash1372/lumavault-studio
+```
+
+or:
+
+```text
+https://huggingface.co/spaces/Nash1372/lumavault-studio
+```
+
+The workflow can also fall back to the token owner's Hugging Face namespace when the requested namespace is not writable.
 
 ## Scope
 
-โปรเจกต์นี้ไม่ล็อกอินแทนผู้ใช้ ไม่เก็บ cookie/token และไม่ bypass privacy ของแพลตฟอร์ม ใช้สำหรับคอนเทนต์ที่ผู้ใช้เป็นเจ้าของหรือมีสิทธิ์เข้าถึงเท่านั้น
-
-## Files
-
-- `server.js` - local server, parser, and download proxy
-- `public/index.html` - main UI
-- `public/styles.css` - app styling
-- `public/app.js` - browser-side interaction
-
-## Render
-
-Render uses `ffmpeg` from the local machine. If Render says FFmpeg is missing, run:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-ffmpeg.ps1
-```
-
-Then restart the app from the desktop icon.
+This project does not log in on behalf of users, store cookies, bypass privacy controls, or bypass platform access restrictions. It works from URLs and page source that the user can already access.
