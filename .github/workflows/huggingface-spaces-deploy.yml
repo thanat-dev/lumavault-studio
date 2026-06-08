@@ -29,6 +29,37 @@ jobs:
             exit 1
           fi
 
+          case "$HF_SPACE_REPO" in
+            https://huggingface.co/spaces/*)
+              HF_SPACE_PATH="${HF_SPACE_REPO#https://huggingface.co/spaces/}"
+              ;;
+            http://huggingface.co/spaces/*)
+              HF_SPACE_PATH="${HF_SPACE_REPO#http://huggingface.co/spaces/}"
+              ;;
+            huggingface.co/spaces/*)
+              HF_SPACE_PATH="${HF_SPACE_REPO#huggingface.co/spaces/}"
+              ;;
+            spaces/*/*)
+              HF_SPACE_PATH="${HF_SPACE_REPO#spaces/}"
+              ;;
+            */*)
+              HF_SPACE_PATH="$HF_SPACE_REPO"
+              ;;
+            *)
+              echo "HF_SPACE_REPO is invalid."
+              echo "Use one of these formats:"
+              echo "https://huggingface.co/spaces/your-username/lumavault-studio"
+              echo "your-username/lumavault-studio"
+              exit 1
+              ;;
+          esac
+
+          if ! printf '%s' "$HF_SPACE_PATH" | grep -Eq '^[^/]+/[^/]+$'; then
+            echo "HF_SPACE_REPO must point to exactly one Hugging Face Space."
+            echo "Expected format: your-username/lumavault-studio"
+            exit 1
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git push --force "https://oauth2:${HF_TOKEN}@${HF_SPACE_REPO#https://}" HEAD:main
+          git push --force "https://oauth2:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE_PATH}" HEAD:main
