@@ -3,6 +3,9 @@ name: Deploy to Hugging Face Spaces
 on:
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -17,6 +20,9 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_SPACE_REPO: ${{ secrets.HF_SPACE_REPO }}
         run: |
+          HF_TOKEN="$(printf '%s' "$HF_TOKEN" | tr -d '\r\n[:space:]')"
+          HF_SPACE_REPO="$(printf '%s' "$HF_SPACE_REPO" | tr -d '\r\n[:space:]' | sed 's#/*$##')"
+
           if [ -z "$HF_TOKEN" ] || [ -z "$HF_SPACE_REPO" ]; then
             echo "Missing HF_TOKEN or HF_SPACE_REPO repository secret."
             echo "HF_SPACE_REPO example: https://huggingface.co/spaces/your-username/lumavault-studio"
@@ -25,5 +31,4 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git remote add hf "$HF_SPACE_REPO"
           git push --force "https://oauth2:${HF_TOKEN}@${HF_SPACE_REPO#https://}" HEAD:main
