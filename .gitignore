@@ -1,0 +1,9 @@
+node_modules/
+renders/
+public/sample.mp4
+*.log
+.env
+.env.*
+!.env.example
+Thumbs.db
+.DS_Store

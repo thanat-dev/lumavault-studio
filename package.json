@@ -1,0 +1,13 @@
+{
+  "name": "private-media-downloader",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-first media URL extractor and downloader for pages the user can access.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

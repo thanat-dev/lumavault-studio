@@ -1,0 +1,8 @@
+.git
+.github
+node_modules
+renders
+public/sample.mp4
+*.log
+.DS_Store
+Thumbs.db
