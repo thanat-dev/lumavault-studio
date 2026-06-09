@@ -134,8 +134,24 @@ function fallbackVideos(items) {
   return usableVideos(items).sort((a, b) => itemWidth(b) - itemWidth(a));
 }
 
+function recoveredVideos(items) {
+  const trusted = primaryVideos(items);
+  const direct = fallbackVideos(items).filter((item) => String(item.label || "").toLowerCase().includes("direct media"));
+  if (trusted.length || !direct.length || direct.length > 8) return [];
+  return direct;
+}
+
+function actionVideos(items) {
+  const trusted = rankedVideos(items);
+  return trusted.length ? trusted : recoveredVideos(items);
+}
+
+function isRecoveredVideo(item, items = []) {
+  return Boolean(item) && !isPrimaryVideoLabel(item) && recoveredVideos(items).some((candidate) => candidate.url === item.url);
+}
+
 function mainVideoSource(items) {
-  return rankedVideos(items)[0] || null;
+  return actionVideos(items)[0] || null;
 }
 
 function bestRenderSource(items) {
@@ -143,9 +159,9 @@ function bestRenderSource(items) {
 }
 
 function bestPreviewSource(items) {
-  const videos = rankedVideos(items);
+  const videos = actionVideos(items);
   const main = mainVideoSource(items);
-  if (main && (main.recommended || clientLabelPriority(main) >= 60)) return main;
+  if (main) return main;
 
   return (
     videos.find((item) => item.qualityScore === 720 || itemWidth(item) === 1280) ||
@@ -155,7 +171,7 @@ function bestPreviewSource(items) {
 }
 
 function findDirectQuality(items, target) {
-  const videos = rankedVideos(items);
+  const videos = actionVideos(items);
   if (target === 720) {
     return (
       videos.find((item) => item.qualityScore === 720 || itemWidth(item) === 1280) ||
@@ -174,10 +190,13 @@ function findDirectQuality(items, target) {
 function primaryVideoStats(items) {
   const allVideos = usableVideos(items);
   const trustedVideos = primaryVideos(items);
+  const recovered = recoveredVideos(items);
   return {
     allVideos: allVideos.length,
     trustedVideos: trustedVideos.length,
+    recoveredVideos: recovered.length,
     hasTrusted: trustedVideos.length > 0,
+    hasRecovered: recovered.length > 0,
   };
 }
 
@@ -191,20 +210,22 @@ function createCardButton(label, disabled, onClick) {
   return button;
 }
 
-function directRow(label, item) {
+function directRow(label, item, items = []) {
+  const recovered = isRecoveredVideo(item, items);
   return {
     type: item ? "direct" : "missing",
     quality: label,
-    render: "ลิงก์ตรง",
+    render: recovered ? "Recovered" : "ลิงก์ตรง",
     url: item?.url || "",
-    status: item ? "พร้อมดาวน์โหลด" : "ไม่มีลิงก์ตรง",
+    status: item ? (recovered ? "พร้อมดาวน์โหลดจาก direct media" : "พร้อมดาวน์โหลด") : "ไม่มีลิงก์ตรง",
     note: item
-      ? (item.expiresAt ? `หมดอายุประมาณ ${new Date(item.expiresAt).toLocaleString()}` : "")
+      ? (recovered ? "กู้คืนจาก direct media ใน source นี้ โปรดดูตัวอย่างก่อนดาวน์โหลด" : (item.expiresAt ? `หมดอายุประมาณ ${new Date(item.expiresAt).toLocaleString()}` : ""))
       : "",
   };
 }
 
 function renderRow(label, width, sourceItem, outputType = "mp4") {
+  const recovered = sourceItem && !isPrimaryVideoLabel(sourceItem);
   return {
     type: "render",
     quality: label,
@@ -212,18 +233,30 @@ function renderRow(label, width, sourceItem, outputType = "mp4") {
     sourceUrl: sourceItem?.url || "",
     width,
     outputType,
-    status: sourceItem ? "พร้อม Render" : "Render ไม่พร้อม",
+    status: sourceItem ? (recovered ? "พร้อม Render จาก direct media" : "พร้อม Render") : "Render ไม่พร้อม",
     note: sourceItem
-      ? "ใช้ FFmpeg จากไฟล์หลักที่พบ"
+      ? (recovered ? "Render จาก direct media ที่กู้คืนได้" : "ใช้ FFmpeg จากไฟล์หลักที่พบ")
       : "ยังไม่พบไฟล์หลักที่เชื่อถือได้สำหรับ Render",
   };
 }
 
 function buildMp4Rows(items) {
   const sourceItem = bestRenderSource(items);
+  const recovered = recoveredVideos(items);
+  if (!primaryVideos(items).length && recovered.length) {
+    const directRows = recovered.slice(0, 4).map((item) => directRow(item.quality || "MP4", item, items));
+    return [
+      ...directRows,
+      renderRow("1920p", 1920, sourceItem),
+      renderRow("1280p", 1280, sourceItem),
+      renderRow("960p", 960, sourceItem),
+      renderRow("640p", 640, sourceItem),
+    ];
+  }
+
   return [
-    directRow("720p (HD)", findDirectQuality(items, 720)),
-    directRow("360p (SD)", findDirectQuality(items, 360)),
+    directRow("720p (HD)", findDirectQuality(items, 720), items),
+    directRow("360p (SD)", findDirectQuality(items, 360), items),
     renderRow("1920p", 1920, sourceItem),
     renderRow("1280p", 1280, sourceItem),
     renderRow("960p", 960, sourceItem),
@@ -305,12 +338,16 @@ function renderVideoCard(payload) {
   const qualityChip = document.createElement("span");
   qualityChip.textContent = preview?.quality ? `ตัวอย่าง ${preview.quality}` : "ไม่มีตัวอย่าง";
   const trustedChip = document.createElement("span");
-  trustedChip.textContent = stats.hasTrusted ? `วิดีโอหลัก ${stats.trustedVideos} ไฟล์` : `ซ่อน media ไม่ตรง ${stats.allVideos} ไฟล์`;
+  trustedChip.textContent = stats.hasTrusted
+    ? `วิดีโอหลัก ${stats.trustedVideos} ไฟล์`
+    : (stats.hasRecovered ? `กู้คืน direct media ${stats.recoveredVideos} ไฟล์` : `ซ่อน media ไม่ตรง ${stats.allVideos} ไฟล์`);
   metaLine.append(durationChip, qualityChip, trustedChip);
 
   const insight = document.createElement("small");
   insight.textContent = sourceItem
-    ? `เลือกไฟล์หลักจาก ${sourceItem.label} • ซ่อน media แทรกที่ไม่ผูกกับโพสต์`
+    ? (isPrimaryVideoLabel(sourceItem)
+      ? `เลือกไฟล์หลักจาก ${sourceItem.label} • ซ่อน media แทรกที่ไม่ผูกกับโพสต์`
+      : `กู้คืนวิดีโอจาก direct media ใน source นี้ • ตรวจสอบตัวอย่างก่อนดาวน์โหลด`)
     : "ยังไม่พบลิงก์วิดีโอหลักที่เชื่อถือได้ ระบบจึงไม่แสดงตัวอย่างเพื่อป้องกันคลิปผิดตัว";
 
   const actions = document.createElement("div");
@@ -318,7 +355,7 @@ function renderVideoCard(payload) {
   actions.append(
     createCardButton("ดูตัวอย่าง", !preview?.url, () => previewBox.querySelector("video")?.play()),
     createCardButton("ขยายภาพ", !preview?.url && !image, () => previewBox.requestFullscreen?.()),
-    createCardButton("เปิดไฟล์หลัก", !sourceItem?.url, () => window.open(sourceItem.url, "_blank", "noopener")),
+    createCardButton("เปิดไฟล์วิดีโอ", !sourceItem?.url, () => window.open(sourceItem.url, "_blank", "noopener")),
     createCardButton("คัดลอกลิงก์", !sourceItem?.url, async () => {
       await navigator.clipboard.writeText(sourceItem.url);
       setStatus("คัดลอกลิงก์วิดีโอหลักแล้ว");
