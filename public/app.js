@@ -52,6 +52,15 @@ function bestRenderSource(items) {
   return usableVideos(items).sort((a, b) => itemWidth(b) - itemWidth(a))[0] || null;
 }
 
+function bestPreviewSource(items) {
+  const videos = usableVideos(items);
+  return (
+    videos.find((item) => item.qualityScore === 720 || itemWidth(item) === 1280) ||
+    videos.find((item) => item.qualityScore === 360 || itemWidth(item) === 640) ||
+    bestRenderSource(items)
+  );
+}
+
 function findDirectQuality(items, target) {
   const videos = usableVideos(items);
   if (target === 720) {
@@ -123,18 +132,40 @@ function renderVideoCard(payload) {
   const title = meta.title || "Facebook Video";
   const duration = meta.duration || "";
   const image = meta.thumbnail || "";
+  const preview = bestPreviewSource(payload.items || []);
 
   videoCard.replaceChildren();
 
-  const thumb = document.createElement("div");
-  thumb.className = "thumb";
-  if (image) {
+  const previewBox = document.createElement("div");
+  previewBox.className = "preview-box";
+
+  if (preview?.url) {
+    const video = document.createElement("video");
+    video.controls = true;
+    video.preload = "metadata";
+    video.playsInline = true;
+    video.src = preview.url;
+    if (image) video.poster = image;
+    video.addEventListener("error", () => {
+      previewBox.classList.add("preview-fallback");
+      if (image) {
+        const img = document.createElement("img");
+        img.src = image;
+        img.alt = title;
+        previewBox.replaceChildren(img);
+      } else {
+        previewBox.textContent = "▶";
+      }
+    });
+    previewBox.append(video);
+  } else if (image) {
     const img = document.createElement("img");
     img.src = image;
     img.alt = title;
-    thumb.append(img);
+    previewBox.append(img);
   } else {
-    thumb.textContent = "▶";
+    previewBox.classList.add("preview-fallback");
+    previewBox.textContent = "▶";
   }
 
   const copy = document.createElement("div");
@@ -143,8 +174,10 @@ function renderVideoCard(payload) {
   heading.textContent = title;
   const time = document.createElement("span");
   time.textContent = duration || "ไม่พบระยะเวลา";
-  copy.append(heading, time);
-  videoCard.append(thumb, copy);
+  const previewHint = document.createElement("small");
+  previewHint.textContent = preview?.url ? `ตัวอย่างจาก ${preview.quality}` : "ไม่พบวิดีโอสำหรับแสดงตัวอย่าง";
+  copy.append(heading, time, previewHint);
+  videoCard.append(previewBox, copy);
 }
 
 async function pollRender(jobId, button, note, progressBar) {
