@@ -220,6 +220,107 @@ function collectBody(req, limit = 8 * 1024 * 1024) {
   });
 }
 
+function fetchPublicPageSource(rawUrl, redirects = 0) {
+  return new Promise((resolve, reject) => {
+    let target;
+    try {
+      target = new URL(rawUrl);
+    } catch {
+      reject(new Error("Invalid URL"));
+      return;
+    }
+
+    if (!["http:", "https:"].includes(target.protocol) || isBlockedHost(target.hostname)) {
+      reject(new Error("Only public http/https URLs are allowed"));
+      return;
+    }
+
+    const client = target.protocol === "https:" ? httpsRequest : httpRequest;
+    const isMobileFacebook = target.hostname.toLowerCase() === "m.facebook.com";
+    const upstream = client(
+      target,
+      {
+        method: "GET",
+        headers: {
+          "user-agent": isMobileFacebook
+            ? "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+            : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
+          accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "accept-language": "th-TH,th;q=0.9,en-US;q=0.8,en;q=0.7",
+          "accept-encoding": "identity",
+          "cache-control": "no-cache",
+          pragma: "no-cache",
+          referer: isMobileFacebook ? "https://m.facebook.com/" : "https://www.facebook.com/",
+        },
+      },
+      (upstreamRes) => {
+        if ([301, 302, 303, 307, 308].includes(upstreamRes.statusCode || 0) && upstreamRes.headers.location) {
+          upstreamRes.resume();
+          if (redirects >= 5) {
+            reject(new Error("Too many redirects"));
+            return;
+          }
+          fetchPublicPageSource(new URL(upstreamRes.headers.location, target).toString(), redirects + 1)
+            .then(resolve)
+            .catch(reject);
+          return;
+        }
+
+        if ((upstreamRes.statusCode || 500) >= 400) {
+          upstreamRes.resume();
+          reject(new Error(`Source server returned ${upstreamRes.statusCode || 500}`));
+          return;
+        }
+
+        let size = 0;
+        const limit = 16 * 1024 * 1024;
+        const chunks = [];
+        upstreamRes.on("data", (chunk) => {
+          size += chunk.length;
+          if (size > limit) {
+            upstreamRes.destroy(new Error("Fetched source is too large"));
+            return;
+          }
+          chunks.push(chunk);
+        });
+        upstreamRes.on("end", () => {
+          const source = Buffer.concat(chunks).toString("utf8");
+          if (source.trim().length < 50) {
+            reject(new Error("Source page was empty"));
+            return;
+          }
+          resolve({
+            source,
+            finalUrl: target.toString(),
+            contentType: upstreamRes.headers["content-type"] || "",
+          });
+        });
+        upstreamRes.on("error", reject);
+      },
+    );
+
+    upstream.setTimeout(15000, () => upstream.destroy(new Error("Source fetch timed out")));
+    upstream.on("error", reject);
+    upstream.end();
+  });
+}
+
+function isFacebookHost(hostname) {
+  const host = hostname.toLowerCase();
+  return host === "facebook.com" || host.endsWith(".facebook.com") || host === "fb.watch";
+}
+
+function toMobileFacebookUrl(rawUrl) {
+  try {
+    const target = new URL(rawUrl);
+    if (!isFacebookHost(target.hostname)) return "";
+    target.hostname = "m.facebook.com";
+    return target.toString();
+  } catch {
+    return "";
+  }
+}
+
 function decodeRepeatedly(value) {
   let current = String(value);
   for (let i = 0; i < 5; i += 1) {
@@ -880,6 +981,39 @@ const server = createServer(async (req, res) => {
     if (req.method === "OPTIONS") {
       res.writeHead(204, corsHeaders());
       res.end();
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/source") {
+      const body = JSON.parse(await collectBody(req, 1024 * 1024));
+      const pageUrl = `${body.pageUrl || ""}`.trim();
+      if (!pageUrl) {
+        sendJson(res, 400, { error: "Please enter a URL first" });
+        return;
+      }
+
+      try {
+        let fetched;
+        try {
+          fetched = await fetchPublicPageSource(pageUrl);
+        } catch (error) {
+          const mobileUrl = toMobileFacebookUrl(pageUrl);
+          if (!mobileUrl || mobileUrl === pageUrl) throw error;
+          fetched = await fetchPublicPageSource(mobileUrl);
+        }
+        sendJson(res, 200, {
+          ok: true,
+          source: fetched.source,
+          finalUrl: fetched.finalUrl,
+          contentType: fetched.contentType,
+          fetchedAt: new Date().toISOString(),
+        });
+      } catch (error) {
+        sendJson(res, 502, {
+          error: "Could not fetch page source automatically. Please open view-source in your browser and paste it manually.",
+          detail: error.message,
+        });
+      }
       return;
     }
 

@@ -7,6 +7,7 @@ const resultsEl = document.querySelector("#results");
 const resultPanel = document.querySelector("#resultPanel");
 const videoCard = document.querySelector("#videoCard");
 const copySourceUrl = document.querySelector("#copySourceUrl");
+const fetchSourceButton = document.querySelector("#fetchSource");
 const tabs = [...document.querySelectorAll(".tab")];
 
 let lastPayload = null;
@@ -26,6 +27,42 @@ function setStatus(text) {
 function updateSourceUrl() {
   const value = pageUrl.value.trim();
   sourceUrl.value = value ? `view-source:${value}` : "";
+}
+
+async function fetchSourceFromUrl({ silent = false } = {}) {
+  updateSourceUrl();
+  const value = pageUrl.value.trim();
+  if (!value) {
+    if (!silent) setStatus("กรุณาใส่ URL ก่อน");
+    throw new Error("กรุณาใส่ URL ก่อน");
+  }
+
+  if (fetchSourceButton) {
+    fetchSourceButton.disabled = true;
+    fetchSourceButton.textContent = "กำลังดึง";
+  }
+  if (!silent) setStatus("กำลังดึง Source");
+
+  try {
+    const response = await fetch(apiUrl("/api/source"), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pageUrl: value }),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "Fetch source failed");
+    source.value = payload.source || "";
+    if (!silent) setStatus("ดึง Source อัตโนมัติแล้ว");
+    return source.value;
+  } catch (error) {
+    if (!silent) setStatus("ดึง Source อัตโนมัติไม่ได้");
+    throw error;
+  } finally {
+    if (fetchSourceButton) {
+      fetchSourceButton.disabled = false;
+      fetchSourceButton.textContent = "ดึง Source";
+    }
+  }
 }
 
 function isClientUsable(item) {
@@ -466,16 +503,31 @@ form.addEventListener("submit", async (event) => {
   setStatus("กำลังวิเคราะห์");
 
   try {
+    let sourceValue = source.value;
+    let autoSourceUsed = false;
+    if (sourceValue.trim().length < 50 && pageUrl.value.trim()) {
+      try {
+        sourceValue = await fetchSourceFromUrl({ silent: true });
+        autoSourceUsed = true;
+        setStatus("ดึง Source แล้ว กำลังวิเคราะห์");
+      } catch {
+        throw new Error("ดึง Source อัตโนมัติไม่ได้ สำหรับวิดีโอส่วนตัวให้เปิด view-source แล้ววาง source เอง");
+      }
+    }
+
     const response = await fetch(apiUrl("/api/extract"), {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         pageUrl: pageUrl.value.trim(),
-        source: source.value,
+        source: sourceValue,
       }),
     });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error || "Analyze failed");
+    if (autoSourceUsed && !(payload.items || []).length) {
+      throw new Error("ดึง Source จากลิงก์ได้ แต่ Facebook ไม่ส่งลิงก์วิดีโอให้ server ต้องวาง view-source จากเบราว์เซอร์ที่ล็อกอินแล้ว");
+    }
     render(payload);
     setStatus((payload.items || []).some(isClientUsable) ? "พบไฟล์ที่ใช้งานได้" : "ไม่พบไฟล์ที่ดาวน์โหลดได้");
   } catch (error) {
@@ -494,6 +546,16 @@ copySourceUrl.addEventListener("click", async () => {
   updateSourceUrl();
   await navigator.clipboard.writeText(sourceUrl.value);
   setStatus("คัดลอกแล้ว");
+});
+
+fetchSourceButton?.addEventListener("click", async () => {
+  try {
+    await fetchSourceFromUrl();
+  } catch (error) {
+    resultPanel.hidden = false;
+    videoCard.replaceChildren();
+    resultsEl.innerHTML = `<div class="table-empty">${error.message}<br>ถ้าเป็นคลิปส่วนตัว ให้เปิด view-source จากเบราว์เซอร์ที่ล็อกอินแล้ววาง Source เอง</div>`;
+  }
 });
 
 tabs.forEach((tab) => {
