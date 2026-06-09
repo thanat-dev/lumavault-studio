@@ -41,9 +41,18 @@ const mimeTypes = {
   ".svg": "image/svg+xml",
 };
 
+function corsHeaders() {
+  return {
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET,POST,OPTIONS",
+    "access-control-allow-headers": "content-type",
+  };
+}
+
 function sendJson(res, status, payload) {
   const body = JSON.stringify(payload);
   res.writeHead(status, {
+    ...corsHeaders(),
     "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
     pragma: "no-cache",
@@ -547,6 +556,7 @@ function proxyDownload(req, res, rawUrl) {
       const extension = target.pathname.toLowerCase().includes(".mp3") ? "mp3" : "mp4";
       const filename = `download-${Date.now()}.${extension}`;
       res.writeHead(200, {
+        ...corsHeaders(),
         "content-type": upstreamRes.headers["content-type"] || "application/octet-stream",
         "content-length": upstreamRes.headers["content-length"] || undefined,
         "content-disposition": `attachment; filename="${filename}"`,
@@ -576,7 +586,7 @@ function redirectToDownload(res, rawUrl) {
     return;
   }
 
-  res.writeHead(302, { location: target.toString() });
+  res.writeHead(302, { ...corsHeaders(), location: target.toString() });
   res.end();
 }
 
@@ -590,6 +600,7 @@ function serveRenderFile(res, id) {
   const size = statSync(job.output).size;
   const filename = `render-${id}.${job.type}`;
   res.writeHead(200, {
+    ...corsHeaders(),
     "content-type": job.type === "mp3" ? "audio/mpeg" : "video/mp4",
     "content-length": size,
     "content-disposition": `attachment; filename="${filename}"`,
@@ -609,6 +620,7 @@ async function serveStatic(req, res) {
   }
 
   res.writeHead(200, {
+    ...corsHeaders(),
     "content-type": mimeTypes[extname(filePath)] || "application/octet-stream",
     "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
     pragma: "no-cache",
@@ -621,6 +633,12 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url || "/", `http://${req.headers.host}`);
 
   try {
+    if (req.method === "OPTIONS") {
+      res.writeHead(204, corsHeaders());
+      res.end();
+      return;
+    }
+
     if (req.method === "POST" && url.pathname === "/api/extract") {
       const body = JSON.parse(await collectBody(req));
       const source = `${body.source || ""}`;

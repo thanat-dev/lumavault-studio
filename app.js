@@ -12,6 +12,13 @@ const tabs = [...document.querySelectorAll(".tab")];
 let lastPayload = null;
 let activeTab = "mp4";
 
+const productionApiOrigin = "https://nash1372-lumavault-studio.hf.space";
+
+function apiUrl(path) {
+  const isStaticPages = location.hostname.endsWith("github.io");
+  return `${isStaticPages ? productionApiOrigin : ""}${path}`;
+}
+
 function setStatus(text) {
   statusEl.textContent = text;
 }
@@ -210,7 +217,7 @@ function renderVideoCard(payload) {
 }
 
 async function pollRender(jobId, button, note, progressBar) {
-  const response = await fetch(`/api/render-status?id=${encodeURIComponent(jobId)}`);
+  const response = await fetch(apiUrl(`/api/render-status?id=${encodeURIComponent(jobId)}`));
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Render status failed");
 
@@ -218,7 +225,7 @@ async function pollRender(jobId, button, note, progressBar) {
   if (job.status === "done") {
     const link = document.createElement("a");
     link.className = "download";
-    link.href = job.downloadPath;
+    link.href = apiUrl(job.downloadPath);
     link.textContent = "ดาวน์โหลด";
     button.replaceWith(link);
     note.textContent = "Render เสร็จแล้ว";
@@ -263,7 +270,7 @@ async function startRender(row, button, note, progressBar) {
   progressBar.classList.remove("error");
   progressBar.querySelector("span").style.width = "2%";
 
-  const response = await fetch("/api/render", {
+  const response = await fetch(apiUrl("/api/render"), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -364,7 +371,7 @@ form.addEventListener("submit", async (event) => {
   setStatus("กำลังวิเคราะห์");
 
   try {
-    const response = await fetch("/api/extract", {
+    const response = await fetch(apiUrl("/api/extract"), {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
