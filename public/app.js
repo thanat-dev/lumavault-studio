@@ -1,4 +1,4 @@
-const form = document.querySelector("#extractForm");
+﻿const form = document.querySelector("#extractForm");
 const pageUrl = document.querySelector("#pageUrl");
 const sourceUrl = document.querySelector("#sourceUrl");
 const source = document.querySelector("#source");
@@ -55,6 +55,22 @@ function usableVideos(items) {
   return items.filter((item) => item.type === "video" && item.extension === "mp4" && isClientUsable(item));
 }
 
+function isPrimaryVideoLabel(item) {
+  const label = String(item.label || "").toLowerCase();
+  return (
+    label.includes("native hd") ||
+    label.includes("native sd") ||
+    label.includes("quality hd") ||
+    label.includes("hd src") ||
+    label.includes("sd src") ||
+    label.includes("playable")
+  );
+}
+
+function primaryVideos(items) {
+  return usableVideos(items).filter(isPrimaryVideoLabel);
+}
+
 function clientLabelPriority(item) {
   const label = String(item.label || "").toLowerCase();
   if (item.recommended) return 100;
@@ -74,7 +90,7 @@ function mediaConfidence(item) {
 }
 
 function rankedVideos(items) {
-  return usableVideos(items).sort((a, b) => mediaConfidence(b) - mediaConfidence(a));
+  return primaryVideos(items).sort((a, b) => mediaConfidence(b) - mediaConfidence(a));
 }
 
 function mainVideoSource(items) {
@@ -112,13 +128,33 @@ function findDirectQuality(items, target) {
   );
 }
 
+function primaryVideoStats(items) {
+  const allVideos = usableVideos(items);
+  const trustedVideos = primaryVideos(items);
+  return {
+    allVideos: allVideos.length,
+    trustedVideos: trustedVideos.length,
+    hasTrusted: trustedVideos.length > 0,
+  };
+}
+
+function createCardButton(label, disabled, onClick) {
+  const button = document.createElement("button");
+  button.className = "card-action";
+  button.type = "button";
+  button.textContent = label;
+  button.disabled = disabled;
+  if (onClick) button.addEventListener("click", onClick);
+  return button;
+}
+
 function directRow(label, item) {
   return {
     type: item ? "direct" : "missing",
     quality: label,
-    render: "ลิงก์ตรง",
+    render: "เธฅเธดเธเธเนเธ•เธฃเธ",
     url: item?.url || "",
-    note: item?.expiresAt ? `หมดอายุประมาณ ${new Date(item.expiresAt).toLocaleString()}` : "",
+    note: item?.expiresAt ? `เธซเธกเธ”เธญเธฒเธขเธธเธเธฃเธฐเธกเธฒเธ“ ${new Date(item.expiresAt).toLocaleString()}` : "",
   };
 }
 
@@ -130,7 +166,7 @@ function renderRow(label, width, sourceItem, outputType = "mp4") {
     sourceUrl: sourceItem?.url || "",
     width,
     outputType,
-    note: sourceItem ? "ใช้ FFmpeg จากไฟล์ต้นฉบับที่พบ" : "ไม่พบไฟล์ต้นฉบับสำหรับ Render",
+    note: sourceItem ? "เนเธเน FFmpeg เธเธฒเธเนเธเธฅเนเธ•เนเธเธเธเธฑเธเธ—เธตเนเธเธ" : "เนเธกเนเธเธเนเธเธฅเนเธ•เนเธเธเธเธฑเธเธชเธณเธซเธฃเธฑเธ Render",
   };
 }
 
@@ -153,7 +189,7 @@ function buildMp3Rows(items) {
       {
         type: "direct",
         quality: "MP3",
-        render: "ลิงก์ตรง",
+        render: "เธฅเธดเธเธเนเธ•เธฃเธ",
         url: audio.url,
         note: "",
       },
@@ -168,7 +204,10 @@ function renderVideoCard(payload) {
   const title = meta.title || "Facebook Video";
   const duration = meta.duration || "";
   const image = meta.thumbnail || "";
-  const preview = bestPreviewSource(payload.items || []);
+  const items = payload.items || [];
+  const preview = bestPreviewSource(items);
+  const sourceItem = bestRenderSource(items);
+  const stats = primaryVideoStats(items);
 
   videoCard.replaceChildren();
 
@@ -208,14 +247,46 @@ function renderVideoCard(payload) {
   copy.className = "video-copy";
   const heading = document.createElement("strong");
   heading.textContent = title;
-  const time = document.createElement("span");
-  time.textContent = duration || "ไม่พบระยะเวลา";
-  const previewHint = document.createElement("small");
-  previewHint.textContent = preview?.url ? `ตัวอย่างจาก ${preview.quality}` : "ไม่พบวิดีโอสำหรับแสดงตัวอย่าง";
-  copy.append(heading, time, previewHint);
+
+  const metaLine = document.createElement("div");
+  metaLine.className = "video-meta";
+  const durationChip = document.createElement("span");
+  durationChip.textContent = duration || "ไม่พบระยะเวลา";
+  const qualityChip = document.createElement("span");
+  qualityChip.textContent = preview?.quality ? `ตัวอย่าง ${preview.quality}` : "ไม่มีตัวอย่าง";
+  const trustedChip = document.createElement("span");
+  trustedChip.textContent = stats.hasTrusted ? `วิดีโอหลัก ${stats.trustedVideos} ไฟล์` : "ซ่อนคลิปแทรกแล้ว";
+  metaLine.append(durationChip, qualityChip, trustedChip);
+
+  const insight = document.createElement("small");
+  insight.textContent = sourceItem
+    ? `เลือกไฟล์หลักจาก ${sourceItem.label} • พบวิดีโอทั้งหมด ${stats.allVideos} ไฟล์`
+    : "ยังไม่พบลิงก์วิดีโอหลักที่เชื่อถือได้จาก source นี้";
+
+  const actions = document.createElement("div");
+  actions.className = "card-actions";
+  actions.append(
+    createCardButton("ดูตัวอย่าง", !preview?.url, () => previewBox.querySelector("video")?.play()),
+    createCardButton("เปิดไฟล์หลัก", !sourceItem?.url, () => window.open(sourceItem.url, "_blank", "noopener")),
+    createCardButton("คัดลอกลิงก์", !sourceItem?.url, async () => {
+      await navigator.clipboard.writeText(sourceItem.url);
+      setStatus("คัดลอกลิงก์วิดีโอหลักแล้ว");
+    }),
+    createCardButton("MP4", false, () => {
+      activeTab = "mp4";
+      tabs.forEach((item) => item.classList.toggle("active", item.dataset.tab === activeTab));
+      renderRows(payload);
+    }),
+    createCardButton("MP3", false, () => {
+      activeTab = "mp3";
+      tabs.forEach((item) => item.classList.toggle("active", item.dataset.tab === activeTab));
+      renderRows(payload);
+    }),
+  );
+
+  copy.append(heading, metaLine, insight, actions);
   videoCard.append(previewBox, copy);
 }
-
 async function pollRender(jobId, button, note, progressBar) {
   const response = await fetch(apiUrl(`/api/render-status?id=${encodeURIComponent(jobId)}`));
   const payload = await response.json();
@@ -226,9 +297,9 @@ async function pollRender(jobId, button, note, progressBar) {
     const link = document.createElement("a");
     link.className = "download";
     link.href = apiUrl(job.downloadPath);
-    link.textContent = "ดาวน์โหลด";
+    link.textContent = "เธ”เธฒเธงเธเนเนเธซเธฅเธ”";
     button.replaceWith(link);
-    note.textContent = "Render เสร็จแล้ว";
+    note.textContent = "Render เน€เธชเธฃเนเธเนเธฅเนเธง";
     progressBar.hidden = false;
     progressBar.querySelector("span").style.width = "100%";
     return;
@@ -259,13 +330,13 @@ async function pollRender(jobId, button, note, progressBar) {
 
 async function startRender(row, button, note, progressBar) {
   if (!row.sourceUrl) {
-    note.textContent = "ไม่พบไฟล์ต้นฉบับสำหรับ Render";
+    note.textContent = "เนเธกเนเธเธเนเธเธฅเนเธ•เนเธเธเธเธฑเธเธชเธณเธซเธฃเธฑเธ Render";
     return;
   }
 
   button.disabled = true;
   button.textContent = "0%";
-  note.textContent = "กำลังส่งงานให้ FFmpeg";
+  note.textContent = "เธเธณเธฅเธฑเธเธชเนเธเธเธฒเธเนเธซเน FFmpeg";
   progressBar.hidden = false;
   progressBar.classList.remove("error");
   progressBar.querySelector("span").style.width = "2%";
@@ -324,7 +395,7 @@ function renderRows(payload) {
       link.href = row.url;
       link.target = "_blank";
       link.rel = "noopener";
-      link.textContent = "ดาวน์โหลด";
+      link.textContent = "เธ”เธฒเธงเธเนเนเธซเธฅเธ”";
       actionCell.append(link);
     } else if (row.type === "render") {
       const button = document.createElement("button");
@@ -346,8 +417,8 @@ function renderRows(payload) {
       disabled.className = "download disabled";
       disabled.type = "button";
       disabled.disabled = true;
-      disabled.textContent = "ไม่พบ";
-      note.textContent = "ไม่พบลิงก์ตรงคุณภาพนี้";
+      disabled.textContent = "เนเธกเนเธเธ";
+      note.textContent = "เนเธกเนเธเธเธฅเธดเธเธเนเธ•เธฃเธเธเธธเธ“เธ เธฒเธเธเธตเน";
       actionCell.append(disabled);
     }
 
@@ -368,7 +439,7 @@ form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const submit = form.querySelector("button[type='submit']");
   submit.disabled = true;
-  setStatus("กำลังวิเคราะห์");
+  setStatus("เธเธณเธฅเธฑเธเธงเธดเน€เธเธฃเธฒเธฐเธซเน");
 
   try {
     const response = await fetch(apiUrl("/api/extract"), {
@@ -382,12 +453,12 @@ form.addEventListener("submit", async (event) => {
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error || "Analyze failed");
     render(payload);
-    setStatus((payload.items || []).some(isClientUsable) ? "พบไฟล์ที่ใช้งานได้" : "ไม่พบไฟล์ที่ดาวน์โหลดได้");
+    setStatus((payload.items || []).some(isClientUsable) ? "เธเธเนเธเธฅเนเธ—เธตเนเนเธเนเธเธฒเธเนเธ”เน" : "เนเธกเนเธเธเนเธเธฅเนเธ—เธตเนเธ”เธฒเธงเธเนเนเธซเธฅเธ”เนเธ”เน");
   } catch (error) {
     resultPanel.hidden = false;
     videoCard.replaceChildren();
     resultsEl.innerHTML = `<div class="table-empty">${error.message}</div>`;
-    setStatus("เกิดข้อผิดพลาด");
+    setStatus("เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”");
   } finally {
     submit.disabled = false;
   }
@@ -398,7 +469,7 @@ pageUrl.addEventListener("input", updateSourceUrl);
 copySourceUrl.addEventListener("click", async () => {
   updateSourceUrl();
   await navigator.clipboard.writeText(sourceUrl.value);
-  setStatus("คัดลอกแล้ว");
+  setStatus("เธเธฑเธ”เธฅเธญเธเนเธฅเนเธง");
 });
 
 tabs.forEach((tab) => {
@@ -410,3 +481,4 @@ tabs.forEach((tab) => {
 });
 
 updateSourceUrl();
+

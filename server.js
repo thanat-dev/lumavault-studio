@@ -314,8 +314,66 @@ function formatDuration(value) {
   return `${minutes}:${String(rest).padStart(2, "0")}`;
 }
 
+function cleanTitleCandidate(value) {
+  const unicodeDecoded = String(value).replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) =>
+    String.fromCharCode(Number.parseInt(hex, 16)),
+  );
+  return htmlDecode(unicodeDecoded)
+    .replace(/\\n/g, " ")
+    .replace(/\\+"/g, '"')
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s*ดูเพิ่มเติม\s*$/i, "")
+    .replace(/\s*see more\s*$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isGenericTitle(value) {
+  const normalized = value.toLowerCase();
+  return (
+    !value ||
+    value.length < 4 ||
+    normalized === "facebook video" ||
+    normalized === "facebook" ||
+    normalized.includes("log in") ||
+    normalized.includes("เข้าสู่ระบบ") ||
+    normalized.includes("comments") ||
+    normalized.includes("notifications")
+  );
+}
+
+function titleScore(value) {
+  const hasThai = /[\u0e00-\u0e7f]/.test(value);
+  const hasLessonMarker = /\b(part|ep|episode)\b|ตอน|มือใหม่|เริ่มต้น/i.test(value);
+  const lengthScore = Math.min(value.length, 120);
+  return (hasThai ? 120 : 0) + (hasLessonMarker ? 80 : 0) + lengthScore;
+}
+
+function extractSourceTitle(source) {
+  const candidates = [];
+  const addCandidate = (value) => {
+    const cleaned = cleanTitleCandidate(value);
+    if (!isGenericTitle(cleaned)) candidates.push(cleaned);
+  };
+
+  const patterns = [
+    /"message"\s*:\s*\{\s*"text"\s*:\s*"([^"]{4,280})"/gi,
+    /"title"\s*:\s*\{\s*"text"\s*:\s*"([^"]{4,220})"/gi,
+    /"text"\s*:\s*"([^"]{4,220})"\s*,\s*"ranges"\s*:\s*\[/gi,
+    /"name"\s*:\s*"([^"]{4,180})"/gi,
+  ];
+
+  addCandidate(matchMeta(source, ["og:description", "twitter:description", "description"]));
+  for (const pattern of patterns) {
+    for (const match of source.matchAll(pattern)) addCandidate(match[1]);
+  }
+
+  return [...new Set(candidates)].sort((a, b) => titleScore(b) - titleScore(a))[0] || "";
+}
+
 function extractMetadata(source) {
   const title =
+    extractSourceTitle(source) ||
     matchMeta(source, ["og:title", "twitter:title", "title"]) ||
     htmlDecode(source.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1] || "") ||
     "Facebook Video";
@@ -336,6 +394,18 @@ function labelPriority(label) {
   if (normalized.includes("playable")) return 2;
   if (normalized.includes("sd src")) return 1;
   return 0;
+}
+
+function isPrimaryMediaLabel(label) {
+  const normalized = label.toLowerCase();
+  return (
+    normalized.includes("native hd") ||
+    normalized.includes("native sd") ||
+    normalized.includes("quality hd") ||
+    normalized.includes("hd src") ||
+    normalized.includes("sd src") ||
+    normalized.includes("playable")
+  );
 }
 
 function facebookExpiry(parsedUrl) {
@@ -444,9 +514,10 @@ function consolidateMedia(items) {
     id: index + 1,
   }));
 
+  const primaryVideos = unique.filter((item) => item.type === "video" && item.usable && isPrimaryMediaLabel(item.label));
   const recommended =
-    unique.find((item) => item.type === "video" && item.qualityScore > 0 && item.usable) ||
-    unique.find((item) => item.type === "video" && item.usable) ||
+    primaryVideos.find((item) => item.qualityScore > 0) ||
+    primaryVideos[0] ||
     null;
   if (recommended) {
     recommended.recommended = true;
@@ -458,6 +529,7 @@ function consolidateMedia(items) {
   for (const item of unique) {
     if (!item.note && item.invalidReason) item.note = item.invalidReason;
     if (!item.note && item.duplicateCount > 1) item.note = `Grouped ${item.duplicateCount} duplicate links`;
+    if (!item.note && item.label.toLowerCase().includes("direct media")) item.note = "Filtered: page-level media, not trusted as the main video";
     if (!item.note && item.quality === "Unknown") item.note = "Use only if recommended download fails";
     if (!item.note && item.temporary) item.note = "Temporary CDN link. Open or save it soon after analyzing.";
   }
