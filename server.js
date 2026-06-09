@@ -365,7 +365,7 @@ function cleanPostTitleCandidate(value) {
 
   const lines = decoded
     .split(/\r?\n|\\n/)
-    .map((line) => line.replace(/https?:\/\/\S+/gi, "").replace(/\s+/g, " ").trim())
+    .map((line) => line.replace(/https?:\/\/\S+/gi, "").replace(/\\+$/g, "").replace(/^\\+/g, "").replace(/\s+/g, " ").trim())
     .filter(Boolean);
   return (lines.find((line) => !isGenericPostTitle(line)) || lines[0] || decoded).replace(/\s+/g, " ").trim();
 }
@@ -394,6 +394,23 @@ function postTitleScore(value) {
   return (startsLikeTitle ? 180 : 0) + (hasThai ? 120 : 0) + (hasLessonMarker ? 80 : 0) + lengthScore - (hasUrl ? 120 : 0);
 }
 
+function scorePostTitle(value) {
+  const hasThai = /[\u0e00-\u0e7f]/.test(value);
+  const startsLikeLesson = /^(part|ep|episode)\b|^ตอน\s*\d/i.test(value);
+  const looksLikeReelCaption = /คลิป|ย้อนหลัง|storyboard|รีล|reel|ครับ|ค่ะ|คะ/i.test(value);
+  const hasUrl = /https?:\/\//i.test(value);
+  const tooLong = value.length > 160;
+  const lengthScore = Math.min(value.length, 120);
+  return (
+    (startsLikeLesson ? 220 : 0) +
+    (looksLikeReelCaption ? 180 : 0) +
+    (hasThai ? 120 : 0) +
+    lengthScore -
+    (hasUrl ? 180 : 0) -
+    (tooLong ? 80 : 0)
+  );
+}
+
 function extractSourceTitle(source) {
   const candidates = [];
   const titleSource = source.replace(/\\"/g, '"');
@@ -420,7 +437,11 @@ function extractSourceTitle(source) {
     addCandidate(match[1]);
   }
 
-  return [...new Set(candidates)].sort((a, b) => postTitleScore(b) - postTitleScore(a))[0] || "";
+  for (const match of readableTitleSource.matchAll(/((?:คลิป|ย้อนหลัง|storyboard|รีล|Reel)[^"<>]{2,140}(?:ครับ|ค่ะ|คะ)?)/gi)) {
+    addCandidate(match[1]);
+  }
+
+  return [...new Set(candidates)].sort((a, b) => scorePostTitle(b) - scorePostTitle(a))[0] || "";
 }
 
 function extractMetadata(source) {
