@@ -152,9 +152,9 @@ function directRow(label, item) {
   return {
     type: item ? "direct" : "missing",
     quality: label,
-    render: "เธฅเธดเธเธเนเธ•เธฃเธ",
+    render: "ลิงก์ตรง",
     url: item?.url || "",
-    note: item?.expiresAt ? `เธซเธกเธ”เธญเธฒเธขเธธเธเธฃเธฐเธกเธฒเธ“ ${new Date(item.expiresAt).toLocaleString()}` : "",
+    note: item?.expiresAt ? `หมดอายุประมาณ ${new Date(item.expiresAt).toLocaleString()}` : "",
   };
 }
 
@@ -166,7 +166,7 @@ function renderRow(label, width, sourceItem, outputType = "mp4") {
     sourceUrl: sourceItem?.url || "",
     width,
     outputType,
-    note: sourceItem ? "เนเธเน FFmpeg เธเธฒเธเนเธเธฅเนเธ•เนเธเธเธเธฑเธเธ—เธตเนเธเธ" : "เนเธกเนเธเธเนเธเธฅเนเธ•เนเธเธเธเธฑเธเธชเธณเธซเธฃเธฑเธ Render",
+    note: sourceItem ? "ใช้ FFmpeg จากไฟล์ต้นฉบับที่พบ" : "ไม่พบไฟล์ต้นฉบับสำหรับ Render",
   };
 }
 
@@ -189,7 +189,7 @@ function buildMp3Rows(items) {
       {
         type: "direct",
         quality: "MP3",
-        render: "เธฅเธดเธเธเนเธ•เธฃเธ",
+        render: "ลิงก์ตรง",
         url: audio.url,
         note: "",
       },
@@ -297,9 +297,9 @@ async function pollRender(jobId, button, note, progressBar) {
     const link = document.createElement("a");
     link.className = "download";
     link.href = apiUrl(job.downloadPath);
-    link.textContent = "เธ”เธฒเธงเธเนเนเธซเธฅเธ”";
+    link.textContent = "ดาวน์โหลด";
     button.replaceWith(link);
-    note.textContent = "Render เน€เธชเธฃเนเธเนเธฅเนเธง";
+    note.textContent = "Render เสร็จแล้ว";
     progressBar.hidden = false;
     progressBar.querySelector("span").style.width = "100%";
     return;
@@ -330,13 +330,13 @@ async function pollRender(jobId, button, note, progressBar) {
 
 async function startRender(row, button, note, progressBar) {
   if (!row.sourceUrl) {
-    note.textContent = "เนเธกเนเธเธเนเธเธฅเนเธ•เนเธเธเธเธฑเธเธชเธณเธซเธฃเธฑเธ Render";
+    note.textContent = "ไม่พบไฟล์ต้นฉบับสำหรับ Render";
     return;
   }
 
   button.disabled = true;
   button.textContent = "0%";
-  note.textContent = "เธเธณเธฅเธฑเธเธชเนเธเธเธฒเธเนเธซเน FFmpeg";
+  note.textContent = "กำลังส่งงานให้ FFmpeg";
   progressBar.hidden = false;
   progressBar.classList.remove("error");
   progressBar.querySelector("span").style.width = "2%";
@@ -395,7 +395,7 @@ function renderRows(payload) {
       link.href = row.url;
       link.target = "_blank";
       link.rel = "noopener";
-      link.textContent = "เธ”เธฒเธงเธเนเนเธซเธฅเธ”";
+      link.textContent = "ดาวน์โหลด";
       actionCell.append(link);
     } else if (row.type === "render") {
       const button = document.createElement("button");
@@ -417,8 +417,8 @@ function renderRows(payload) {
       disabled.className = "download disabled";
       disabled.type = "button";
       disabled.disabled = true;
-      disabled.textContent = "เนเธกเนเธเธ";
-      note.textContent = "เนเธกเนเธเธเธฅเธดเธเธเนเธ•เธฃเธเธเธธเธ“เธ เธฒเธเธเธตเน";
+      disabled.textContent = "ไม่พบ";
+      note.textContent = "ไม่พบลิงก์ตรงคุณภาพนี้";
       actionCell.append(disabled);
     }
 
@@ -439,7 +439,7 @@ form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const submit = form.querySelector("button[type='submit']");
   submit.disabled = true;
-  setStatus("เธเธณเธฅเธฑเธเธงเธดเน€เธเธฃเธฒเธฐเธซเน");
+  setStatus("กำลังวิเคราะห์");
 
   try {
     const response = await fetch(apiUrl("/api/extract"), {
@@ -453,12 +453,12 @@ form.addEventListener("submit", async (event) => {
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error || "Analyze failed");
     render(payload);
-    setStatus((payload.items || []).some(isClientUsable) ? "เธเธเนเธเธฅเนเธ—เธตเนเนเธเนเธเธฒเธเนเธ”เน" : "เนเธกเนเธเธเนเธเธฅเนเธ—เธตเนเธ”เธฒเธงเธเนเนเธซเธฅเธ”เนเธ”เน");
+    setStatus((payload.items || []).some(isClientUsable) ? "พบไฟล์ที่ใช้งานได้" : "ไม่พบไฟล์ที่ดาวน์โหลดได้");
   } catch (error) {
     resultPanel.hidden = false;
     videoCard.replaceChildren();
     resultsEl.innerHTML = `<div class="table-empty">${error.message}</div>`;
-    setStatus("เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”");
+    setStatus("เกิดข้อผิดพลาด");
   } finally {
     submit.disabled = false;
   }
@@ -469,7 +469,7 @@ pageUrl.addEventListener("input", updateSourceUrl);
 copySourceUrl.addEventListener("click", async () => {
   updateSourceUrl();
   await navigator.clipboard.writeText(sourceUrl.value);
-  setStatus("เธเธฑเธ”เธฅเธญเธเนเธฅเนเธง");
+  setStatus("คัดลอกแล้ว");
 });
 
 tabs.forEach((tab) => {
