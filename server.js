@@ -444,8 +444,107 @@ function extractSourceTitle(source) {
   return [...new Set(candidates)].sort((a, b) => scorePostTitle(b) - scorePostTitle(a))[0] || "";
 }
 
-function extractMetadata(source) {
+function cleanReadableTitle(value) {
+  const unicodeDecoded = String(value).replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) =>
+    String.fromCharCode(Number.parseInt(hex, 16)),
+  );
+  const decoded = htmlDecode(unicodeDecoded)
+    .replace(/\\"/g, '"')
+    .replace(/\\n/g, "\n")
+    .replace(/\\(?=[\u0e00-\u0e7f])/g, "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s*ดูเพิ่มเติม\s*$/i, "")
+    .replace(/\s*see more\s*$/i, "")
+    .trim();
+
+  const line = decoded
+    .split(/\r?\n|\\n/)
+    .map((item) => item.replace(/https?:\/\/\S+/gi, "").replace(/\\+$/g, "").replace(/^\\+/g, "").replace(/\s+/g, " ").trim())
+    .find((item) => item.length >= 4 && !isGenericReadableTitle(item));
+  return (line || decoded).replace(/\s+/g, " ").trim();
+}
+
+function isGenericReadableTitle(value) {
+  const normalized = value.toLowerCase();
+  return (
+    !value ||
+    value.length < 4 ||
+    normalized === "facebook video" ||
+    normalized === "facebook" ||
+    normalized.includes("เข้าสู่ระบบ") ||
+    normalized.includes("log in") ||
+    normalized.includes("comments") ||
+    normalized.includes("notifications") ||
+    /^https?:\/\//i.test(value)
+  );
+}
+
+function scoreTitleCandidate(candidate, isReel) {
+  const value = candidate.value;
+  const hasThai = /[\u0e00-\u0e7f]/.test(value);
+  const startsLikeLesson = /^(part|ep|episode)\b|^ตอน\s*\d/i.test(value);
+  const reelCaption = /คลิป|ย้อนหลัง|storyboard|รีล|reel|ครับ|ค่ะ|คะ/i.test(value);
+  const hasUrl = /https?:\/\//i.test(value);
+  const tooLong = value.length > 160;
+  const kindBoost = {
+    reel: isReel ? 420 : 260,
+    message: isReel ? 360 : 260,
+    description: 120,
+    text: 80,
+    title: isReel ? -80 : 40,
+    name: -80,
+  }[candidate.kind] || 0;
+  return (
+    kindBoost +
+    (startsLikeLesson ? 240 : 0) +
+    (reelCaption ? 260 : 0) +
+    (hasThai ? 120 : 0) +
+    Math.min(value.length, 120) -
+    (hasUrl ? 180 : 0) -
+    (tooLong ? 100 : 0)
+  );
+}
+
+function extractBestTitle(source, pageUrl = "") {
+  const isReel = /\/reel\/|\/reels\//i.test(pageUrl);
+  const titleSource = source.replace(/\\"/g, '"');
+  const readableSource = titleSource
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)))
+    .replace(/\\(?=[\u0e00-\u0e7f])/g, "");
+  const candidates = [];
+  const add = (kind, value) => {
+    const cleaned = cleanReadableTitle(value);
+    if (!isGenericReadableTitle(cleaned)) candidates.push({ kind, value: cleaned });
+  };
+
+  add("description", matchMeta(titleSource, ["og:description", "twitter:description", "description"]));
+
+  const patterns = [
+    ["message", /"message"\s*:\s*\{\s*"text"\s*:\s*"([^"]{4,500})"/gi],
+    ["message", /"message"\s*:\s*"([^"]{4,500})"/gi],
+    ["title", /"title"\s*:\s*\{\s*"text"\s*:\s*"([^"]{4,260})"/gi],
+    ["text", /"text"\s*:\s*"([^"]{4,260})"\s*,\s*"ranges"\s*:\s*\[/gi],
+    ["name", /"name"\s*:\s*"([^"]{4,220})"/gi],
+  ];
+
+  for (const [kind, pattern] of patterns) {
+    for (const match of titleSource.matchAll(pattern)) add(kind, match[1]);
+  }
+
+  for (const match of readableSource.matchAll(/((?:Part|EP|Episode|ตอน)\s*[0-9A-Za-zก-๙ .:_-]{2,140})/gi)) {
+    add("reel", match[1]);
+  }
+  for (const match of readableSource.matchAll(/((?:คลิป|ย้อนหลัง|storyboard|รีล|Reel)[^"<>]{2,160}(?:ครับ|ค่ะ|คะ)?)/gi)) {
+    add("reel", match[1]);
+  }
+
+  const unique = [...new Map(candidates.map((item) => [item.value, item])).values()];
+  return unique.sort((a, b) => scoreTitleCandidate(b, isReel) - scoreTitleCandidate(a, isReel))[0]?.value || "";
+}
+
+function extractMetadata(source, pageUrl = "") {
   const title =
+    extractBestTitle(source, pageUrl) ||
     extractSourceTitle(source) ||
     matchMeta(source, ["og:title", "twitter:title", "title"]) ||
     htmlDecode(source.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1] || "") ||
@@ -610,7 +709,7 @@ function consolidateMedia(items) {
   return unique;
 }
 
-function extractMedia(source) {
+function extractMedia(source, pageUrl = "") {
   const decodedSource = decodeRepeatedly(source);
   const found = new Map();
 
@@ -636,7 +735,7 @@ function extractMedia(source) {
 
   const items = [...found.values()].map(makeMediaItem);
   return {
-    meta: extractMetadata(decodedSource),
+    meta: extractMetadata(decodedSource, pageUrl),
     totalFound: items.length,
     items: consolidateMedia(items),
   };
@@ -791,7 +890,7 @@ const server = createServer(async (req, res) => {
         sendJson(res, 400, { error: "Please paste the page HTML/source first" });
         return;
       }
-      sendJson(res, 200, extractMedia(source));
+      sendJson(res, 200, extractMedia(source, `${body.pageUrl || ""}`));
       return;
     }
 
