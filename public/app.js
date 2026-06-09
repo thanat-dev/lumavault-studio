@@ -93,12 +93,16 @@ function rankedVideos(items) {
   return primaryVideos(items).sort((a, b) => mediaConfidence(b) - mediaConfidence(a));
 }
 
+function fallbackVideos(items) {
+  return usableVideos(items).sort((a, b) => itemWidth(b) - itemWidth(a));
+}
+
 function mainVideoSource(items) {
   return rankedVideos(items)[0] || null;
 }
 
 function bestRenderSource(items) {
-  return mainVideoSource(items);
+  return mainVideoSource(items) || fallbackVideos(items)[0] || null;
 }
 
 function bestPreviewSource(items) {
@@ -154,6 +158,7 @@ function directRow(label, item) {
     quality: label,
     render: "ลิงก์ตรง",
     url: item?.url || "",
+    status: item ? "พร้อมดาวน์โหลด" : "ไม่มีลิงก์ตรง",
     note: item?.expiresAt ? `หมดอายุประมาณ ${new Date(item.expiresAt).toLocaleString()}` : "",
   };
 }
@@ -166,7 +171,10 @@ function renderRow(label, width, sourceItem, outputType = "mp4") {
     sourceUrl: sourceItem?.url || "",
     width,
     outputType,
-    note: sourceItem ? "ใช้ FFmpeg จากไฟล์ต้นฉบับที่พบ" : "ไม่พบไฟล์ต้นฉบับสำหรับ Render",
+    status: sourceItem ? "พร้อม Render" : "Render ไม่พร้อม",
+    note: sourceItem
+      ? (isPrimaryVideoLabel(sourceItem) ? "ใช้ FFmpeg จากไฟล์หลักที่พบ" : "ใช้ไฟล์วิดีโอที่พบเป็น fallback สำหรับ Render")
+      : "ไม่พบไฟล์ต้นฉบับสำหรับ Render",
   };
 }
 
@@ -191,6 +199,7 @@ function buildMp3Rows(items) {
         quality: "MP3",
         render: "ลิงก์ตรง",
         url: audio.url,
+        status: "พร้อมดาวน์โหลด",
         note: "",
       },
     ];
@@ -260,13 +269,14 @@ function renderVideoCard(payload) {
 
   const insight = document.createElement("small");
   insight.textContent = sourceItem
-    ? `เลือกไฟล์หลักจาก ${sourceItem.label} • พบวิดีโอทั้งหมด ${stats.allVideos} ไฟล์`
+    ? `${isPrimaryVideoLabel(sourceItem) ? "เลือกไฟล์หลัก" : "ใช้ fallback สำหรับ preview/render"} จาก ${sourceItem.label} • พบวิดีโอทั้งหมด ${stats.allVideos} ไฟล์`
     : "ยังไม่พบลิงก์วิดีโอหลักที่เชื่อถือได้จาก source นี้";
 
   const actions = document.createElement("div");
   actions.className = "card-actions";
   actions.append(
     createCardButton("ดูตัวอย่าง", !preview?.url, () => previewBox.querySelector("video")?.play()),
+    createCardButton("ขยายภาพ", !preview?.url && !image, () => previewBox.requestFullscreen?.()),
     createCardButton("เปิดไฟล์หลัก", !sourceItem?.url, () => window.open(sourceItem.url, "_blank", "noopener")),
     createCardButton("คัดลอกลิงก์", !sourceItem?.url, async () => {
       await navigator.clipboard.writeText(sourceItem.url);
@@ -383,6 +393,10 @@ function renderRows(payload) {
     const note = document.createElement("small");
     note.textContent = row.note || "";
 
+    const status = document.createElement("span");
+    status.className = `row-status ${row.type}`;
+    status.textContent = row.status || "";
+
     const progress = document.createElement("div");
     progress.className = "render-progress";
     progress.hidden = true;
@@ -422,7 +436,7 @@ function renderRows(payload) {
       actionCell.append(disabled);
     }
 
-    actionCell.append(progress, note);
+    actionCell.append(status, progress, note);
     item.append(quality, render, actionCell);
     resultsEl.append(item);
   }
