@@ -48,12 +48,41 @@ function usableVideos(items) {
   return items.filter((item) => item.type === "video" && item.extension === "mp4" && isClientUsable(item));
 }
 
+function clientLabelPriority(item) {
+  const label = String(item.label || "").toLowerCase();
+  if (item.recommended) return 100;
+  if (label.includes("native hd") || label.includes("quality hd") || label.includes("hd src")) return 80;
+  if (label.includes("playable")) return 70;
+  if (label.includes("native sd") || label.includes("sd src")) return 60;
+  if (label.includes("direct media")) return 10;
+  return 20;
+}
+
+function mediaConfidence(item) {
+  return (
+    clientLabelPriority(item) * 1000000 +
+    (item.duplicateCount || 1) * 10000 +
+    itemWidth(item)
+  );
+}
+
+function rankedVideos(items) {
+  return usableVideos(items).sort((a, b) => mediaConfidence(b) - mediaConfidence(a));
+}
+
+function mainVideoSource(items) {
+  return rankedVideos(items)[0] || null;
+}
+
 function bestRenderSource(items) {
-  return usableVideos(items).sort((a, b) => itemWidth(b) - itemWidth(a))[0] || null;
+  return mainVideoSource(items);
 }
 
 function bestPreviewSource(items) {
-  const videos = usableVideos(items);
+  const videos = rankedVideos(items);
+  const main = mainVideoSource(items);
+  if (main && (main.recommended || clientLabelPriority(main) >= 60)) return main;
+
   return (
     videos.find((item) => item.qualityScore === 720 || itemWidth(item) === 1280) ||
     videos.find((item) => item.qualityScore === 360 || itemWidth(item) === 640) ||
@@ -62,7 +91,7 @@ function bestPreviewSource(items) {
 }
 
 function findDirectQuality(items, target) {
-  const videos = usableVideos(items);
+  const videos = rankedVideos(items);
   if (target === 720) {
     return (
       videos.find((item) => item.qualityScore === 720 || itemWidth(item) === 1280) ||
