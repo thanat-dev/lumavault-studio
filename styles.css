@@ -628,6 +628,11 @@ textarea {
   color: var(--gold-deep);
 }
 
+.download-row.direct .row-status {
+  border-color: rgba(0, 128, 128, 0.28);
+  background: rgba(238, 252, 250, 0.9);
+}
+
 .download-table {
   overflow: hidden;
   border: 1px solid rgba(22, 97, 112, 0.16);

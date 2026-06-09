@@ -119,16 +119,23 @@ function bestPreviewSource(items) {
 
 function findDirectQuality(items, target) {
   const videos = rankedVideos(items);
+  const fallback = fallbackVideos(items);
   if (target === 720) {
     return (
       videos.find((item) => item.qualityScore === 720 || itemWidth(item) === 1280) ||
-      videos.find((item) => item.quality.includes("720"))
+      videos.find((item) => item.quality.includes("720")) ||
+      fallback.find((item) => item.qualityScore === 720 || itemWidth(item) === 1280) ||
+      fallback.find((item) => item.quality.includes("720")) ||
+      fallback[0]
     );
   }
 
   return (
     videos.find((item) => item.qualityScore === 360 || itemWidth(item) === 640) ||
-    videos.find((item) => item.quality.includes("360"))
+    videos.find((item) => item.quality.includes("360")) ||
+    fallback.find((item) => item.qualityScore === 360 || itemWidth(item) === 640) ||
+    fallback.find((item) => item.quality.includes("360")) ||
+    fallback[0]
   );
 }
 
@@ -153,13 +160,16 @@ function createCardButton(label, disabled, onClick) {
 }
 
 function directRow(label, item) {
+  const fallback = item && !isPrimaryVideoLabel(item);
   return {
     type: item ? "direct" : "missing",
     quality: label,
-    render: "ลิงก์ตรง",
+    render: fallback ? "Fallback" : "ลิงก์ตรง",
     url: item?.url || "",
-    status: item ? "พร้อมดาวน์โหลด" : "ไม่มีลิงก์ตรง",
-    note: item?.expiresAt ? `หมดอายุประมาณ ${new Date(item.expiresAt).toLocaleString()}` : "",
+    status: item ? (fallback ? "พร้อมดาวน์โหลดจากตัวอย่าง" : "พร้อมดาวน์โหลด") : "ไม่มีลิงก์ตรง",
+    note: item
+      ? (fallback ? "ใช้ไฟล์เดียวกับตัวอย่าง เพราะไม่พบลิงก์ตรงคุณภาพนี้" : (item.expiresAt ? `หมดอายุประมาณ ${new Date(item.expiresAt).toLocaleString()}` : ""))
+      : "",
   };
 }
 
