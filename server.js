@@ -350,11 +350,59 @@ function titleScore(value) {
   return (hasThai ? 120 : 0) + (hasLessonMarker ? 80 : 0) + lengthScore;
 }
 
+function cleanPostTitleCandidate(value) {
+  const unicodeDecoded = String(value).replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) =>
+    String.fromCharCode(Number.parseInt(hex, 16)),
+  );
+  const decoded = htmlDecode(unicodeDecoded)
+    .replace(/\\n/g, "\n")
+    .replace(/\\+"/g, '"')
+    .replace(/\\(?=[\u0e00-\u0e7f])/g, "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s*ดูเพิ่มเติม\s*$/i, "")
+    .replace(/\s*see more\s*$/i, "")
+    .trim();
+
+  const lines = decoded
+    .split(/\r?\n|\\n/)
+    .map((line) => line.replace(/https?:\/\/\S+/gi, "").replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+  return (lines.find((line) => !isGenericPostTitle(line)) || lines[0] || decoded).replace(/\s+/g, " ").trim();
+}
+
+function isGenericPostTitle(value) {
+  const normalized = value.toLowerCase();
+  return (
+    !value ||
+    value.length < 4 ||
+    normalized === "facebook video" ||
+    normalized === "facebook" ||
+    normalized.includes("log in") ||
+    normalized.includes("เข้าสู่ระบบ") ||
+    normalized.includes("comments") ||
+    normalized.includes("notifications") ||
+    /^https?:\/\//i.test(value)
+  );
+}
+
+function postTitleScore(value) {
+  const hasThai = /[\u0e00-\u0e7f]/.test(value);
+  const startsLikeTitle = /^(part|ep|episode|ตอน)\s*[\wก-๙]/i.test(value);
+  const hasLessonMarker = /\b(part|ep|episode)\b|ตอน|มือใหม่|เริ่มต้น/i.test(value);
+  const hasUrl = /https?:\/\//i.test(value);
+  const lengthScore = Math.min(value.length, 120);
+  return (startsLikeTitle ? 180 : 0) + (hasThai ? 120 : 0) + (hasLessonMarker ? 80 : 0) + lengthScore - (hasUrl ? 120 : 0);
+}
+
 function extractSourceTitle(source) {
   const candidates = [];
+  const titleSource = source.replace(/\\"/g, '"');
+  const readableTitleSource = titleSource
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)))
+    .replace(/\\(?=[\u0e00-\u0e7f])/g, "");
   const addCandidate = (value) => {
-    const cleaned = cleanTitleCandidate(value);
-    if (!isGenericTitle(cleaned)) candidates.push(cleaned);
+    const cleaned = cleanPostTitleCandidate(value);
+    if (!isGenericPostTitle(cleaned)) candidates.push(cleaned);
   };
 
   const patterns = [
@@ -364,12 +412,15 @@ function extractSourceTitle(source) {
     /"name"\s*:\s*"([^"]{4,180})"/gi,
   ];
 
-  addCandidate(matchMeta(source, ["og:description", "twitter:description", "description"]));
+  addCandidate(matchMeta(titleSource, ["og:description", "twitter:description", "description"]));
   for (const pattern of patterns) {
-    for (const match of source.matchAll(pattern)) addCandidate(match[1]);
+    for (const match of titleSource.matchAll(pattern)) addCandidate(match[1]);
+  }
+  for (const match of readableTitleSource.matchAll(/((?:Part|EP|Episode|ตอน)\s*[0-9A-Za-zก-๙ .:_-]{2,120})/gi)) {
+    addCandidate(match[1]);
   }
 
-  return [...new Set(candidates)].sort((a, b) => titleScore(b) - titleScore(a))[0] || "";
+  return [...new Set(candidates)].sort((a, b) => postTitleScore(b) - postTitleScore(a))[0] || "";
 }
 
 function extractMetadata(source) {
