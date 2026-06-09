@@ -139,7 +139,7 @@ function mainVideoSource(items) {
 }
 
 function bestRenderSource(items) {
-  return mainVideoSource(items) || fallbackVideos(items)[0] || null;
+  return mainVideoSource(items);
 }
 
 function bestPreviewSource(items) {
@@ -150,29 +150,24 @@ function bestPreviewSource(items) {
   return (
     videos.find((item) => item.qualityScore === 720 || itemWidth(item) === 1280) ||
     videos.find((item) => item.qualityScore === 360 || itemWidth(item) === 640) ||
-    bestRenderSource(items)
+    null
   );
 }
 
 function findDirectQuality(items, target) {
   const videos = rankedVideos(items);
-  const fallback = fallbackVideos(items);
   if (target === 720) {
     return (
       videos.find((item) => item.qualityScore === 720 || itemWidth(item) === 1280) ||
       videos.find((item) => item.quality.includes("720")) ||
-      fallback.find((item) => item.qualityScore === 720 || itemWidth(item) === 1280) ||
-      fallback.find((item) => item.quality.includes("720")) ||
-      fallback[0]
+      null
     );
   }
 
   return (
     videos.find((item) => item.qualityScore === 360 || itemWidth(item) === 640) ||
     videos.find((item) => item.quality.includes("360")) ||
-    fallback.find((item) => item.qualityScore === 360 || itemWidth(item) === 640) ||
-    fallback.find((item) => item.quality.includes("360")) ||
-    fallback[0]
+    null
   );
 }
 
@@ -197,15 +192,14 @@ function createCardButton(label, disabled, onClick) {
 }
 
 function directRow(label, item) {
-  const fallback = item && !isPrimaryVideoLabel(item);
   return {
     type: item ? "direct" : "missing",
     quality: label,
-    render: fallback ? "Fallback" : "ลิงก์ตรง",
+    render: "ลิงก์ตรง",
     url: item?.url || "",
-    status: item ? (fallback ? "พร้อมดาวน์โหลดจากตัวอย่าง" : "พร้อมดาวน์โหลด") : "ไม่มีลิงก์ตรง",
+    status: item ? "พร้อมดาวน์โหลด" : "ไม่มีลิงก์ตรง",
     note: item
-      ? (fallback ? "ใช้ไฟล์เดียวกับตัวอย่าง เพราะไม่พบลิงก์ตรงคุณภาพนี้" : (item.expiresAt ? `หมดอายุประมาณ ${new Date(item.expiresAt).toLocaleString()}` : ""))
+      ? (item.expiresAt ? `หมดอายุประมาณ ${new Date(item.expiresAt).toLocaleString()}` : "")
       : "",
   };
 }
@@ -220,8 +214,8 @@ function renderRow(label, width, sourceItem, outputType = "mp4") {
     outputType,
     status: sourceItem ? "พร้อม Render" : "Render ไม่พร้อม",
     note: sourceItem
-      ? (isPrimaryVideoLabel(sourceItem) ? "ใช้ FFmpeg จากไฟล์หลักที่พบ" : "ใช้ไฟล์วิดีโอที่พบเป็น fallback สำหรับ Render")
-      : "ไม่พบไฟล์ต้นฉบับสำหรับ Render",
+      ? "ใช้ FFmpeg จากไฟล์หลักที่พบ"
+      : "ยังไม่พบไฟล์หลักที่เชื่อถือได้สำหรับ Render",
   };
 }
 
@@ -311,13 +305,13 @@ function renderVideoCard(payload) {
   const qualityChip = document.createElement("span");
   qualityChip.textContent = preview?.quality ? `ตัวอย่าง ${preview.quality}` : "ไม่มีตัวอย่าง";
   const trustedChip = document.createElement("span");
-  trustedChip.textContent = stats.hasTrusted ? `วิดีโอหลัก ${stats.trustedVideos} ไฟล์` : "ซ่อนคลิปแทรกแล้ว";
+  trustedChip.textContent = stats.hasTrusted ? `วิดีโอหลัก ${stats.trustedVideos} ไฟล์` : `ซ่อน media ไม่ตรง ${stats.allVideos} ไฟล์`;
   metaLine.append(durationChip, qualityChip, trustedChip);
 
   const insight = document.createElement("small");
   insight.textContent = sourceItem
-    ? `${isPrimaryVideoLabel(sourceItem) ? "เลือกไฟล์หลัก" : "ใช้ fallback สำหรับ preview/render"} จาก ${sourceItem.label} • พบวิดีโอทั้งหมด ${stats.allVideos} ไฟล์`
-    : "ยังไม่พบลิงก์วิดีโอหลักที่เชื่อถือได้จาก source นี้";
+    ? `เลือกไฟล์หลักจาก ${sourceItem.label} • ซ่อน media แทรกที่ไม่ผูกกับโพสต์`
+    : "ยังไม่พบลิงก์วิดีโอหลักที่เชื่อถือได้ ระบบจึงไม่แสดงตัวอย่างเพื่อป้องกันคลิปผิดตัว";
 
   const actions = document.createElement("div");
   actions.className = "card-actions";

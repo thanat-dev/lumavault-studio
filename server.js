@@ -585,12 +585,13 @@ function scoreTitleCandidate(candidate, isReel) {
   const hasThai = /[\u0e00-\u0e7f]/.test(value);
   const startsLikeLesson = /^(part|ep|episode)\b|^ตอน\s*\d/i.test(value);
   const reelCaption = /คลิป|ย้อนหลัง|storyboard|รีล|reel|ครับ|ค่ะ|คะ/i.test(value);
+  const likelyPostCaption = /storyboard|part\s*\d/i.test(value);
   const hasUrl = /https?:\/\//i.test(value);
-  const tooLong = value.length > 160;
+  const tooLong = value.length > 140;
   const kindBoost = {
-    reel: isReel ? 420 : 260,
-    message: isReel ? 360 : 260,
-    description: 120,
+    message: isReel ? 560 : 360,
+    description: isReel ? 460 : 240,
+    reel: isReel ? 180 : 160,
     text: 80,
     title: isReel ? -80 : 40,
     name: -80,
@@ -598,6 +599,7 @@ function scoreTitleCandidate(candidate, isReel) {
   return (
     kindBoost +
     (startsLikeLesson ? 240 : 0) +
+    (likelyPostCaption ? 260 : 0) +
     (reelCaption ? 260 : 0) +
     (hasThai ? 120 : 0) +
     Math.min(value.length, 120) -
