@@ -321,6 +321,7 @@ function cleanTitleCandidate(value) {
   return htmlDecode(unicodeDecoded)
     .replace(/\\n/g, " ")
     .replace(/\\+"/g, '"')
+    .replace(/\\(?=[\u0e00-\u0e7f])/g, "")
     .replace(/<[^>]*>/g, " ")
     .replace(/\s*ดูเพิ่มเติม\s*$/i, "")
     .replace(/\s*see more\s*$/i, "")
