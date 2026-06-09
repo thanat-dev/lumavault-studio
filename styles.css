@@ -1,19 +1,21 @@
 :root {
   color-scheme: light;
-  --bg: #f8fbfd;
-  --paper: rgba(255, 255, 255, 0.9);
+  --bg: #fbfaf7;
+  --paper: rgba(255, 255, 255, 0.92);
   --paper-solid: #ffffff;
-  --ink: #12212b;
-  --muted: #647482;
-  --line: rgba(22, 97, 112, 0.18);
-  --line-strong: rgba(0, 166, 161, 0.44);
-  --teal: #00a6a1;
-  --teal-deep: #007f7a;
-  --gold: #c6942d;
-  --gold-soft: rgba(198, 148, 45, 0.16);
-  --mint: #e9fbf7;
+  --ink: #171411;
+  --muted: #766d61;
+  --line: rgba(158, 118, 31, 0.22);
+  --line-strong: rgba(193, 145, 44, 0.58);
+  --teal: #0fa59b;
+  --teal-deep: #08766f;
+  --gold: #c79a34;
+  --gold-deep: #8f6417;
+  --gold-soft: rgba(199, 154, 52, 0.17);
+  --ivory: #fffaf0;
+  --mint: #f4fbf8;
   --danger: #b42335;
-  --shadow: 0 28px 70px rgba(28, 48, 61, 0.12);
+  --shadow: 0 30px 80px rgba(65, 48, 18, 0.13);
   font-family: Inter, "Segoe UI", Tahoma, Arial, sans-serif;
 }
 
@@ -30,9 +32,9 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   background:
-    radial-gradient(circle at 15% 8%, rgba(0, 166, 161, 0.12), transparent 28%),
-    radial-gradient(circle at 90% 12%, rgba(198, 148, 45, 0.12), transparent 30%),
-    linear-gradient(180deg, #ffffff 0%, var(--bg) 58%, #eef7f7 100%);
+    radial-gradient(circle at 12% 8%, rgba(199, 154, 52, 0.16), transparent 27%),
+    radial-gradient(circle at 88% 10%, rgba(15, 165, 155, 0.1), transparent 30%),
+    linear-gradient(180deg, #ffffff 0%, var(--bg) 58%, #f5efe1 100%);
   color: var(--ink);
 }
 
@@ -43,7 +45,7 @@ body::before {
   pointer-events: none;
   background:
     linear-gradient(rgba(0, 127, 122, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 127, 122, 0.055) 1px, transparent 1px);
+    linear-gradient(90deg, rgba(199, 154, 52, 0.06) 1px, transparent 1px);
   background-size: 44px 44px;
   mask-image: linear-gradient(to bottom, black, transparent 78%);
 }
@@ -51,15 +53,15 @@ body::before {
 body::after {
   content: "";
   position: fixed;
-  inset: auto -80px -170px auto;
-  width: 520px;
-  height: 520px;
+  inset: auto -90px -190px auto;
+  width: 560px;
+  height: 560px;
   pointer-events: none;
   border: 1px solid rgba(198, 148, 45, 0.22);
   transform: rotate(45deg);
   background:
-    linear-gradient(45deg, transparent 45%, rgba(198, 148, 45, 0.12) 45% 55%, transparent 55%),
-    linear-gradient(-45deg, transparent 45%, rgba(0, 166, 161, 0.08) 45% 55%, transparent 55%);
+    linear-gradient(45deg, transparent 45%, rgba(199, 154, 52, 0.14) 45% 55%, transparent 55%),
+    linear-gradient(-45deg, transparent 45%, rgba(199, 154, 52, 0.08) 45% 55%, transparent 55%);
 }
 
 button,
@@ -75,17 +77,57 @@ textarea {
   pointer-events: none;
   opacity: 0.9;
   background:
-    linear-gradient(90deg, transparent 0 10%, rgba(0, 166, 161, 0.18) 10% 10.15%, transparent 10.15% 100%),
-    linear-gradient(90deg, transparent 0 72%, rgba(198, 148, 45, 0.16) 72% 72.15%, transparent 72.15% 100%),
-    linear-gradient(135deg, transparent 0 62%, rgba(0, 166, 161, 0.13) 62% 62.25%, transparent 62.25% 100%);
+    linear-gradient(90deg, transparent 0 10%, rgba(199, 154, 52, 0.2) 10% 10.15%, transparent 10.15% 100%),
+    linear-gradient(90deg, transparent 0 72%, rgba(199, 154, 52, 0.16) 72% 72.15%, transparent 72.15% 100%),
+    linear-gradient(135deg, transparent 0 62%, rgba(15, 165, 155, 0.1) 62% 62.25%, transparent 62.25% 100%);
+}
+
+.gold-ornament {
+  position: fixed;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.26;
+}
+
+.gold-ornament::before,
+.gold-ornament::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(199, 154, 52, 0.5);
+  border-radius: 46% 8px 46% 8px;
+  transform: rotate(45deg);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(199, 154, 52, 0.22), transparent 0 9%, rgba(199, 154, 52, 0.1) 9% 16%, transparent 16%),
+    linear-gradient(45deg, transparent 43%, rgba(199, 154, 52, 0.18) 43% 57%, transparent 57%);
+}
+
+.gold-ornament::after {
+  inset: 28px;
+  border-color: rgba(15, 165, 155, 0.24);
+  transform: rotate(45deg) scale(0.72);
+}
+
+.ornament-left {
+  top: 174px;
+  left: -110px;
+  width: 260px;
+  height: 260px;
+}
+
+.ornament-right {
+  right: -130px;
+  bottom: 150px;
+  width: 340px;
+  height: 340px;
 }
 
 .navbar {
   position: sticky;
   top: 0;
   z-index: 10;
-  border-bottom: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.82);
+  border-bottom: 1px solid rgba(199, 154, 52, 0.18);
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(18px);
 }
 
@@ -115,10 +157,10 @@ textarea {
   border: 1px solid var(--line-strong);
   border-radius: 8px;
   background:
-    linear-gradient(135deg, rgba(0, 166, 161, 0.16), transparent 48%),
-    linear-gradient(45deg, transparent 38%, rgba(198, 148, 45, 0.22) 38% 54%, transparent 54%),
+    linear-gradient(135deg, rgba(199, 154, 52, 0.18), transparent 48%),
+    linear-gradient(45deg, transparent 38%, rgba(199, 154, 52, 0.24) 38% 54%, transparent 54%),
     #ffffff;
-  color: var(--teal-deep);
+  color: var(--gold-deep);
   font-size: 13px;
   font-weight: 950;
   box-shadow: 0 14px 28px rgba(0, 127, 122, 0.12);
@@ -143,11 +185,11 @@ textarea {
 }
 
 .nav-badge {
-  border: 1px solid rgba(0, 166, 161, 0.26);
+  border: 1px solid rgba(199, 154, 52, 0.3);
   border-radius: 8px;
   padding: 8px 11px;
-  color: var(--teal-deep);
-  background: rgba(0, 166, 161, 0.08);
+  color: var(--gold-deep);
+  background: rgba(199, 154, 52, 0.1);
   font-size: 12px;
   font-weight: 900;
 }
@@ -177,7 +219,7 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 7px 10px;
-  color: var(--teal-deep);
+  color: var(--gold-deep);
   background: rgba(255, 255, 255, 0.72);
   font-size: 12px;
   font-weight: 900;
@@ -185,7 +227,7 @@ textarea {
 
 .hero-kicker span:last-child,
 .panel-header span:last-child {
-  color: #8b641d;
+  color: var(--teal-deep);
   background: var(--gold-soft);
   border-color: rgba(198, 148, 45, 0.26);
 }
@@ -221,8 +263,8 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 8px;
   background:
-    linear-gradient(135deg, rgba(0, 166, 161, 0.08), transparent 42%),
-    linear-gradient(225deg, rgba(198, 148, 45, 0.08), transparent 44%),
+    linear-gradient(135deg, rgba(199, 154, 52, 0.12), transparent 42%),
+    linear-gradient(225deg, rgba(15, 165, 155, 0.05), transparent 44%),
     var(--paper);
   box-shadow: var(--shadow);
 }
@@ -235,9 +277,10 @@ textarea {
   pointer-events: none;
   border-radius: inherit;
   background:
-    linear-gradient(90deg, var(--teal), transparent 18%) top left / 100% 1px no-repeat,
-    linear-gradient(var(--gold), transparent 20%) top left / 1px 100% no-repeat,
-    linear-gradient(45deg, transparent 0 48%, rgba(198, 148, 45, 0.12) 48% 52%, transparent 52% 100%) bottom right / 88px 88px no-repeat;
+    linear-gradient(90deg, var(--gold), transparent 22%) top left / 100% 1px no-repeat,
+    linear-gradient(var(--gold), transparent 24%) top left / 1px 100% no-repeat,
+    radial-gradient(circle at 100% 0, rgba(199, 154, 52, 0.16), transparent 0 22%, transparent 22%),
+    linear-gradient(45deg, transparent 0 47%, rgba(199, 154, 52, 0.15) 47% 53%, transparent 53% 100%) bottom right / 104px 104px no-repeat;
 }
 
 .input-panel {
@@ -255,8 +298,8 @@ textarea {
 }
 
 .status {
-  color: var(--teal-deep) !important;
-  background: var(--mint) !important;
+  color: var(--gold-deep) !important;
+  background: rgba(199, 154, 52, 0.12) !important;
 }
 
 .field {
@@ -291,10 +334,10 @@ textarea:focus {
   flex: 0 0 auto;
   place-items: center;
   border-right: 1px solid rgba(0, 166, 161, 0.16);
-  color: var(--teal-deep);
+  color: var(--gold-deep);
   background:
-    linear-gradient(135deg, rgba(0, 166, 161, 0.12), transparent 58%),
-    #f5fbfa;
+    linear-gradient(135deg, rgba(199, 154, 52, 0.16), transparent 58%),
+    var(--ivory);
   font-size: 12px;
   font-weight: 950;
 }
@@ -334,8 +377,8 @@ textarea {
   min-width: 76px;
   border: 0;
   border-left: 1px solid rgba(0, 166, 161, 0.16);
-  background: #f1faf8;
-  color: var(--teal-deep);
+  background: var(--ivory);
+  color: var(--gold-deep);
   cursor: pointer;
   font-size: 13px;
   font-weight: 950;
@@ -343,17 +386,17 @@ textarea {
 
 .primary {
   min-height: 54px;
-  border: 1px solid rgba(0, 166, 161, 0.46);
+  border: 1px solid rgba(199, 154, 52, 0.56);
   border-radius: 8px;
   padding: 0 22px;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 44%),
-    linear-gradient(135deg, var(--teal), #43d6c8);
+    linear-gradient(135deg, rgba(255, 255, 255, 0.3), transparent 44%),
+    linear-gradient(135deg, #d6a73c, #8f6417);
   color: #ffffff;
   cursor: pointer;
   font-size: 15px;
   font-weight: 950;
-  box-shadow: 0 16px 34px rgba(0, 127, 122, 0.18);
+  box-shadow: 0 16px 34px rgba(143, 100, 23, 0.22);
 }
 
 .primary:hover,
@@ -396,9 +439,9 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 8px;
   background:
-    linear-gradient(135deg, rgba(0, 166, 161, 0.12), transparent 54%),
+    linear-gradient(135deg, rgba(199, 154, 52, 0.14), transparent 54%),
     #ffffff;
-  color: var(--teal);
+  color: var(--gold-deep);
   font-size: 30px;
 }
 
@@ -434,7 +477,7 @@ textarea {
 .tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  background: #eef8f6;
+  background: #fbf5e7;
 }
 
 .tab {
@@ -449,7 +492,7 @@ textarea {
 
 .tab.active {
   color: #ffffff;
-  background: linear-gradient(135deg, var(--teal), #38c9bc);
+  background: linear-gradient(135deg, #d6a73c, #9d711d);
 }
 
 .table-head,
@@ -493,10 +536,10 @@ textarea {
   min-width: 108px;
   min-height: 36px;
   place-items: center;
-  border: 1px solid rgba(0, 166, 161, 0.34);
+  border: 1px solid rgba(199, 154, 52, 0.38);
   border-radius: 8px;
-  background: #eefbf8;
-  color: var(--teal-deep);
+  background: var(--ivory);
+  color: var(--gold-deep);
   text-decoration: none;
   font-size: 13px;
   font-weight: 950;
@@ -532,7 +575,7 @@ textarea {
   width: 0%;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--teal), var(--gold));
+  background: linear-gradient(90deg, var(--gold), var(--teal));
   transition: width 0.35s ease;
 }
 
