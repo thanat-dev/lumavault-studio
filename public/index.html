@@ -7,29 +7,42 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
+    <div class="thai-circuit" aria-hidden="true"></div>
+
     <nav class="navbar">
       <div class="nav-inner">
         <a class="brand" href="/" aria-label="LumaVault Studio">
           <span class="brand-mark">LV</span>
-          <span>LumaVault Studio</span>
+          <span class="brand-copy">
+            <strong>LumaVault</strong>
+            <small>Thai Cyber Studio</small>
+          </span>
         </a>
-        <span class="nav-badge">Private Media Render</span>
+        <span class="nav-badge">Render Node Online</span>
       </div>
     </nav>
 
     <main class="shell">
       <section class="hero" aria-labelledby="appTitle">
-        <p class="eyebrow">Facebook Private Video Downloader</p>
+        <div class="hero-kicker">
+          <span>Private Media</span>
+          <span>Thai Cyber Engine</span>
+        </div>
         <h1 id="appTitle">ดาวน์โหลดและ Render วิดีโอส่วนตัว</h1>
-        <p>วางลิงก์ Facebook และ source ของหน้าที่คุณเข้าถึงได้ ระบบจะคัดตัวเลือกที่จำเป็นสำหรับดาวน์โหลดหรือ Render เป็น MP4 / MP3</p>
+        <p>เครื่องมือสกัดลิงก์และ Render ไฟล์วิดีโอจาก source ที่คุณเข้าถึงได้ ออกแบบใหม่ด้วยโทนขาว ลายไทย และเส้นวงจรแบบ High-Tech</p>
       </section>
 
       <form class="workspace" id="extractForm">
         <section class="input-panel" aria-label="ข้อมูลวิดีโอ">
+          <div class="panel-header">
+            <span>ข้อมูลต้นทาง</span>
+            <span id="status" class="status">พร้อมใช้งาน</span>
+          </div>
+
           <label class="field">
             <span>URL วิดีโอ Facebook</span>
             <div class="input-row">
-              <span class="input-icon">f</span>
+              <span class="input-icon">01</span>
               <input
                 id="pageUrl"
                 type="url"
@@ -42,7 +55,7 @@
           <label class="field">
             <span>ลิงก์เปิด Page Source</span>
             <div class="input-row">
-              <span class="input-icon">⌘</span>
+              <span class="input-icon">02</span>
               <input id="sourceUrl" type="text" readonly />
               <button class="icon-action" id="copySourceUrl" type="button" title="คัดลอกลิงก์ source" aria-label="คัดลอกลิงก์ source">
                 Copy
@@ -55,13 +68,15 @@
             <textarea id="source" spellcheck="false" placeholder="วางข้อมูล view-source ทั้งหมดที่นี่"></textarea>
           </label>
 
-          <div class="submit-row">
-            <button class="primary" type="submit">วิเคราะห์วิดีโอ</button>
-            <span class="status" id="status">พร้อมใช้งาน</span>
-          </div>
+          <button class="primary" type="submit">วิเคราะห์วิดีโอ</button>
         </section>
 
         <section class="result-panel" id="resultPanel" aria-live="polite" hidden>
+          <div class="panel-header">
+            <span>ผลลัพธ์</span>
+            <span>พร้อมส่งออก</span>
+          </div>
+
           <div class="video-card" id="videoCard"></div>
 
           <div class="download-table">
