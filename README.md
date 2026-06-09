@@ -43,6 +43,16 @@ https://thanat-dev.github.io/lumavault-studio/
 - Show render progress percentage and FFmpeg speed.
 - Run locally, on Docker, or on Hugging Face Spaces.
 
+## Project Progress
+
+Current completion: **38%**
+
+The detailed roadmap and weighted progress tracker are in:
+
+```text
+PROJECT_PLAN.md
+```
+
 ## Local Run
 
 ```powershell

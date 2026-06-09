@@ -1,5 +1,15 @@
 # Deploy LumaVault Studio
 
+Current production target: **Hugging Face Spaces**
+
+Current project completion: **38%**
+
+See the full development roadmap in:
+
+```text
+PROJECT_PLAN.md
+```
+
 ## Current Live Static URL
 
 GitHub Pages:
