@@ -585,7 +585,7 @@ function scoreTitleCandidate(candidate, isReel) {
   const hasThai = /[\u0e00-\u0e7f]/.test(value);
   const startsLikeLesson = /^(part|ep|episode)\b|^ตอน\s*\d|^บทที่\s*\d/i.test(value);
   const reelCaption = /คลิป|ย้อนหลัง|storyboard|รีล|reel|ครับ|ค่ะ|คะ/i.test(value);
-  const likelyPostCaption = /storyboard|part\s*\d|บทที่\s*\d|สิ่งที่ควรรู้|นายหน้า\s*ai/i.test(value);
+  const likelyPostCaption = /storyboard|part\s*\d|บทที่\s*\d|อัพเดท|อัปเดต|สรุป\s*\d+|เทคนิค|ทำเพจ|แปะลิ้งก์|แปะลิงก์|สิ่งที่ควรรู้|นายหน้า\s*ai/i.test(value);
   const hasUrl = /https?:\/\//i.test(value);
   const tooLong = value.length > 140;
   const kindBoost = {
@@ -639,6 +639,12 @@ function extractBestTitle(source, pageUrl = "") {
     add("post", match[1]);
   }
   for (const match of readableSource.matchAll(/((?:สิ่งที่ควรรู้|นายหน้า\s*AI)[^\r\n"<>]{2,160})/gi)) {
+    add("post", match[1]);
+  }
+  for (const match of readableSource.matchAll(/(\(?\s*(?:อัพเดท|อัปเดต)\s*\d{4}\s*\)?[^\r\n"<>]{2,180})/gi)) {
+    add("post", match[1]);
+  }
+  for (const match of readableSource.matchAll(/((?:สรุป\s*\d+|เทคนิค|ทำเพจ|แปะลิ้งก์|แปะลิงก์)[^\r\n"<>]{2,180})/gi)) {
     add("post", match[1]);
   }
   for (const match of readableSource.matchAll(/((?:Part|EP|Episode|ตอน)\s*[0-9A-Za-zก-๙ .:_-]{2,140})/gi)) {
