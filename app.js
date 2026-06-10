@@ -36,6 +36,7 @@ function updateSourceUrl() {
   const value = cleanPageUrlInput(pageUrl.value);
   if (pageUrl.value.trim() !== value) pageUrl.value = value;
   sourceUrl.value = value ? `view-source:${value}` : "";
+  copySourceUrl.href = sourceUrl.value || "#";
   return value;
 }
 
@@ -56,21 +57,6 @@ async function copyText(value) {
   const copied = document.execCommand("copy");
   textarea.remove();
   return copied;
-}
-
-function openSourceTab(value) {
-  const opened = window.open(value, "_blank", "noopener");
-  if (opened) return true;
-
-  const link = document.createElement("a");
-  link.href = value;
-  link.target = "_blank";
-  link.rel = "noopener";
-  link.style.display = "none";
-  document.body.append(link);
-  link.click();
-  link.remove();
-  return false;
 }
 
 async function pasteSourceFromClipboard() {
@@ -587,27 +573,24 @@ form.addEventListener("submit", async (event) => {
 
 pageUrl.addEventListener("input", updateSourceUrl);
 
-copySourceUrl.addEventListener("click", async () => {
+copySourceUrl.addEventListener("click", async (event) => {
   const value = updateSourceUrl();
   if (!sourceUrl.value) {
+    event.preventDefault();
     setStatus("กรุณาใส่ URL ก่อน");
     return;
   }
   if (!/^https?:\/\//i.test(value)) {
+    event.preventDefault();
     setStatus("URL ต้องขึ้นต้นด้วย http:// หรือ https://");
     return;
   }
 
-  const opened = openSourceTab(sourceUrl.value);
   try {
     await copyText(sourceUrl.value);
-    setStatus(opened
-      ? "เปิด Source และคัดลอกลิงก์แล้ว ให้กด Ctrl+A / Ctrl+C จากแท็บ Source แล้วกลับมากด วาง Clipboard"
-      : "คัดลอกลิงก์ Source แล้ว ถ้าแท็บไม่เปิด ให้วางลิงก์ใน address bar แล้วกด Enter");
+    setStatus("เปิด Source ในแท็บใหม่และคัดลอกลิงก์แล้ว ให้กด Ctrl+A / Ctrl+C จากแท็บ Source แล้วกลับมากด วาง Clipboard");
   } catch {
-    setStatus(opened
-      ? "เปิด Source แล้ว แต่คัดลอกลิงก์ไม่สำเร็จ ให้กด Ctrl+A / Ctrl+C จากแท็บ Source"
-      : "เปิดแท็บไม่สำเร็จ ให้ copy ลิงก์ view-source ในช่องนี้ไปวาง address bar เอง");
+    setStatus("เปิด Source ในแท็บใหม่แล้ว ถ้าคัดลอกลิงก์ไม่สำเร็จ ให้กด Ctrl+A / Ctrl+C จากแท็บ Source");
   }
 });
 

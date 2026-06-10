@@ -444,14 +444,18 @@ textarea {
 }
 
 .icon-action {
+  display: grid;
+  place-items: center;
   min-width: 76px;
   border: 0;
   border-left: 1px solid rgba(0, 166, 161, 0.16);
+  padding: 0 12px;
   background: var(--ivory);
   color: var(--gold-deep);
   cursor: pointer;
   font-size: 13px;
   font-weight: 950;
+  text-decoration: none;
 }
 
 .primary {
