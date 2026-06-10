@@ -7,16 +7,13 @@ const resultsEl = document.querySelector("#results");
 const resultPanel = document.querySelector("#resultPanel");
 const videoCard = document.querySelector("#videoCard");
 const copySourceUrl = document.querySelector("#copySourceUrl");
-const fetchSourceButton = document.querySelector("#fetchSource");
 const pasteSourceButton = document.querySelector("#pasteSource");
-const copySourceHelperButton = document.querySelector("#copySourceHelper");
 const tabs = [...document.querySelectorAll(".tab")];
 
 let lastPayload = null;
 let activeTab = "mp4";
 
 const productionApiOrigin = "https://nash1372-lumavault-studio.hf.space";
-const sourceHelperScript = `javascript:(()=>{const s=document.documentElement.outerHTML;const t=document.createElement('textarea');t.value=s;t.style.position='fixed';t.style.left='-9999px';document.body.appendChild(t);t.focus();t.select();document.execCommand('copy');t.remove();alert('คัดลอก Source จากหน้า Facebook แล้ว กลับไป LumaVault แล้วกด วาง Clipboard');})();`;
 
 function apiUrl(path) {
   const isStaticPages = location.hostname.endsWith("github.io");
@@ -30,42 +27,6 @@ function setStatus(text) {
 function updateSourceUrl() {
   const value = pageUrl.value.trim();
   sourceUrl.value = value ? `view-source:${value}` : "";
-}
-
-async function fetchSourceFromUrl({ silent = false } = {}) {
-  updateSourceUrl();
-  const value = pageUrl.value.trim();
-  if (!value) {
-    if (!silent) setStatus("กรุณาใส่ URL ก่อน");
-    throw new Error("กรุณาใส่ URL ก่อน");
-  }
-
-  if (fetchSourceButton) {
-    fetchSourceButton.disabled = true;
-    fetchSourceButton.textContent = "กำลังดึง";
-  }
-  if (!silent) setStatus("กำลังดึง Source");
-
-  try {
-    const response = await fetch(apiUrl("/api/source"), {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ pageUrl: value }),
-    });
-    const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error || "Fetch source failed");
-    source.value = payload.source || "";
-    if (!silent) setStatus("ดึง Source อัตโนมัติแล้ว");
-    return source.value;
-  } catch (error) {
-    if (!silent) setStatus("ดึง Source อัตโนมัติไม่ได้");
-    throw error;
-  } finally {
-    if (fetchSourceButton) {
-      fetchSourceButton.disabled = false;
-      fetchSourceButton.textContent = "ดึง Source";
-    }
-  }
 }
 
 async function pasteSourceFromClipboard() {
@@ -554,15 +515,8 @@ form.addEventListener("submit", async (event) => {
 
   try {
     let sourceValue = source.value;
-    let autoSourceUsed = false;
-    if (sourceValue.trim().length < 50 && pageUrl.value.trim()) {
-      try {
-        sourceValue = await fetchSourceFromUrl({ silent: true });
-        autoSourceUsed = true;
-        setStatus("ดึง Source แล้ว กำลังวิเคราะห์");
-      } catch {
-        throw new Error("ดึง Source แบบ Public ไม่ครบ สำหรับ Group/Private ให้ใช้ Ctrl+U แล้วคัดลอก source หรือใช้ปุ่มคัดลอก Helper");
-      }
+    if (sourceValue.trim().length < 50) {
+      throw new Error("กรุณาเปิด Source จากเบราว์เซอร์ที่ล็อกอิน Facebook แล้วคัดลอกทั้งหน้า จากนั้นกด วาง Clipboard");
     }
 
     const response = await fetch(apiUrl("/api/extract"), {
@@ -575,9 +529,6 @@ form.addEventListener("submit", async (event) => {
     });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error || "Analyze failed");
-    if (autoSourceUsed && !(payload.items || []).length) {
-      throw new Error("Source ที่ server ดึงมาไม่มีไฟล์วิดีโอจริง ให้ใช้ source จากเบราว์เซอร์ที่ล็อกอินแล้ว: Ctrl+U > Ctrl+A > Ctrl+C > วาง Clipboard");
-    }
     render(payload);
     setStatus((payload.items || []).some(isClientUsable) ? "พบไฟล์ที่ใช้งานได้" : "ไม่พบไฟล์ที่ดาวน์โหลดได้");
   } catch (error) {
@@ -594,18 +545,13 @@ pageUrl.addEventListener("input", updateSourceUrl);
 
 copySourceUrl.addEventListener("click", async () => {
   updateSourceUrl();
-  await navigator.clipboard.writeText(sourceUrl.value);
-  setStatus("คัดลอกแล้ว");
-});
-
-fetchSourceButton?.addEventListener("click", async () => {
-  try {
-    await fetchSourceFromUrl();
-  } catch (error) {
-    resultPanel.hidden = false;
-    videoCard.replaceChildren();
-    resultsEl.innerHTML = `<div class="table-empty">${error.message}<br>สำหรับ Group/Private ให้เปิด view-source จากเบราว์เซอร์ที่ล็อกอิน แล้วกด Ctrl+A / Ctrl+C จากนั้นกลับมากด วาง Clipboard</div>`;
+  if (!sourceUrl.value) {
+    setStatus("กรุณาใส่ URL ก่อน");
+    return;
   }
+  await navigator.clipboard.writeText(sourceUrl.value);
+  window.open(sourceUrl.value, "_blank", "noopener");
+  setStatus("เปิด Source แล้ว ให้กด Ctrl+A / Ctrl+C จากแท็บนั้น แล้วกลับมากด วาง Clipboard");
 });
 
 pasteSourceButton?.addEventListener("click", async () => {
@@ -617,11 +563,6 @@ pasteSourceButton?.addEventListener("click", async () => {
     videoCard.replaceChildren();
     resultsEl.innerHTML = `<div class="table-empty">${error.message}</div>`;
   }
-});
-
-copySourceHelperButton?.addEventListener("click", async () => {
-  await navigator.clipboard.writeText(sourceHelperScript);
-  setStatus("คัดลอก Helper แล้ว ให้วางใน address bar บนหน้า Facebook แล้วกด Enter");
 });
 
 tabs.forEach((tab) => {
