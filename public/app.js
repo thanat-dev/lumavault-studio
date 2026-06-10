@@ -24,9 +24,19 @@ function setStatus(text) {
   statusEl.textContent = text;
 }
 
+function cleanPageUrlInput(value) {
+  let current = String(value || "").trim();
+  while (/^view-source:/i.test(current)) {
+    current = current.replace(/^view-source:/i, "").trim();
+  }
+  return current;
+}
+
 function updateSourceUrl() {
-  const value = pageUrl.value.trim();
+  const value = cleanPageUrlInput(pageUrl.value);
+  if (pageUrl.value.trim() !== value) pageUrl.value = value;
   sourceUrl.value = value ? `view-source:${value}` : "";
+  return value;
 }
 
 async function copyText(value) {
@@ -557,7 +567,7 @@ form.addEventListener("submit", async (event) => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        pageUrl: pageUrl.value.trim(),
+        pageUrl: updateSourceUrl(),
         source: sourceValue,
       }),
     });
@@ -578,9 +588,13 @@ form.addEventListener("submit", async (event) => {
 pageUrl.addEventListener("input", updateSourceUrl);
 
 copySourceUrl.addEventListener("click", async () => {
-  updateSourceUrl();
+  const value = updateSourceUrl();
   if (!sourceUrl.value) {
     setStatus("กรุณาใส่ URL ก่อน");
+    return;
+  }
+  if (!/^https?:\/\//i.test(value)) {
+    setStatus("URL ต้องขึ้นต้นด้วย http:// หรือ https://");
     return;
   }
 
