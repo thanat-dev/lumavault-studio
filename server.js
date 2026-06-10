@@ -583,12 +583,13 @@ function isGenericReadableTitle(value) {
 function scoreTitleCandidate(candidate, isReel) {
   const value = candidate.value;
   const hasThai = /[\u0e00-\u0e7f]/.test(value);
-  const startsLikeLesson = /^(part|ep|episode)\b|^ตอน\s*\d/i.test(value);
+  const startsLikeLesson = /^(part|ep|episode)\b|^ตอน\s*\d|^บทที่\s*\d/i.test(value);
   const reelCaption = /คลิป|ย้อนหลัง|storyboard|รีล|reel|ครับ|ค่ะ|คะ/i.test(value);
-  const likelyPostCaption = /storyboard|part\s*\d/i.test(value);
+  const likelyPostCaption = /storyboard|part\s*\d|บทที่\s*\d|สิ่งที่ควรรู้|นายหน้า\s*ai/i.test(value);
   const hasUrl = /https?:\/\//i.test(value);
   const tooLong = value.length > 140;
   const kindBoost = {
+    post: isReel ? 260 : 620,
     message: isReel ? 560 : 360,
     description: isReel ? 460 : 240,
     reel: isReel ? 180 : 160,
@@ -634,6 +635,12 @@ function extractBestTitle(source, pageUrl = "") {
     for (const match of titleSource.matchAll(pattern)) add(kind, match[1]);
   }
 
+  for (const match of readableSource.matchAll(/(บทที่\s*\d+[^\r\n"<>]{2,160})/gi)) {
+    add("post", match[1]);
+  }
+  for (const match of readableSource.matchAll(/((?:สิ่งที่ควรรู้|นายหน้า\s*AI)[^\r\n"<>]{2,160})/gi)) {
+    add("post", match[1]);
+  }
   for (const match of readableSource.matchAll(/((?:Part|EP|Episode|ตอน)\s*[0-9A-Za-zก-๙ .:_-]{2,140})/gi)) {
     add("reel", match[1]);
   }
