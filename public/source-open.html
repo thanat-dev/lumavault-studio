@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Open Facebook Source - LumaVault</title>
+    <style>
+      :root {
+        --ink: #14212d;
+        --muted: #6b7280;
+        --gold: #b98717;
+        --gold-soft: #f7e8bd;
+        --line: rgba(185, 135, 23, 0.34);
+        --teal: #008b87;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background:
+          linear-gradient(90deg, rgba(185, 135, 23, 0.08) 1px, transparent 1px),
+          linear-gradient(0deg, rgba(0, 139, 135, 0.08) 1px, transparent 1px),
+          radial-gradient(circle at 18% 15%, rgba(247, 232, 189, 0.82), transparent 30%),
+          linear-gradient(135deg, #fffdf8, #f7fbfb);
+        background-size: 42px 42px, 42px 42px, auto, auto;
+        color: var(--ink);
+        font-family: Inter, "Noto Sans Thai", "Segoe UI", Tahoma, sans-serif;
+      }
+
+      main {
+        width: min(840px, 100%);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 28px;
+        background: rgba(255, 255, 255, 0.82);
+        box-shadow: 0 26px 70px rgba(20, 33, 45, 0.12);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 22px;
+        font-weight: 950;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .mark {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: linear-gradient(135deg, #fff, var(--gold-soft));
+        color: #6c4700;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(28px, 5vw, 54px);
+        line-height: 1;
+      }
+
+      p {
+        margin: 0 0 18px;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+
+      .panel {
+        display: grid;
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      label {
+        font-weight: 900;
+      }
+
+      input {
+        width: 100%;
+        min-height: 54px;
+        border: 1px solid rgba(0, 139, 135, 0.24);
+        border-radius: 12px;
+        padding: 0 16px;
+        color: var(--ink);
+        font: 14px/1.4 Consolas, "Courier New", monospace;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      button,
+      a {
+        min-height: 44px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 0 16px;
+        display: inline-grid;
+        place-items: center;
+        background: #fffaf0;
+        color: #7a5200;
+        cursor: pointer;
+        font-weight: 950;
+        text-decoration: none;
+      }
+
+      .primary {
+        border-color: rgba(0, 139, 135, 0.28);
+        background: #f4ffff;
+        color: var(--teal);
+      }
+
+      .steps {
+        margin-top: 18px;
+        padding: 16px;
+        border: 1px solid rgba(185, 135, 23, 0.22);
+        border-radius: 14px;
+        background: rgba(255, 252, 244, 0.74);
+      }
+
+      .steps strong {
+        color: #7a5200;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="brand">
+        <div class="mark">LV</div>
+        <div>LumaVault Source Helper</div>
+      </div>
+      <h1>เปิด Page Source</h1>
+      <p>
+        Chrome ไม่อนุญาตให้เว็บเปิด <strong>view-source:</strong> อัตโนมัติได้เสมอ
+        หน้านี้จึงเตรียมลิงก์ให้พร้อมใช้งานแบบไม่หลุดขั้นตอน
+      </p>
+
+      <section class="panel">
+        <label for="sourceLink">ลิงก์ Source ที่ต้องเปิด</label>
+        <input id="sourceLink" readonly />
+        <div class="actions">
+          <button class="primary" id="copySource" type="button">คัดลอก Source URL</button>
+          <a id="tryOpen" href="#" target="_blank" rel="noopener">ลองเปิด view-source</a>
+          <a id="openOriginal" href="#" target="_blank" rel="noopener">เปิดลิงก์วิดีโอเดิม</a>
+        </div>
+      </section>
+
+      <div class="steps">
+        <p><strong>วิธีที่แน่นอนที่สุด:</strong> กดคัดลอก Source URL แล้ววางใน address bar ของแท็บนี้หรือแท็บใหม่ จากนั้นกด Enter</p>
+        <p>เมื่อเห็นหน้า source แล้วกด Ctrl+A / Ctrl+C แล้วกลับไปที่ LumaVault เพื่อกด วาง Clipboard</p>
+      </div>
+    </main>
+
+    <script>
+      const params = new URLSearchParams(location.search);
+      const rawUrl = params.get("url") || "";
+      const cleanUrl = rawUrl.replace(/^(view-source:)+/i, "").trim();
+      const sourceUrl = cleanUrl ? `view-source:${cleanUrl}` : "";
+      const sourceInput = document.querySelector("#sourceLink");
+      const copyButton = document.querySelector("#copySource");
+      const tryOpen = document.querySelector("#tryOpen");
+      const openOriginal = document.querySelector("#openOriginal");
+
+      sourceInput.value = sourceUrl;
+      tryOpen.href = sourceUrl || "#";
+      openOriginal.href = cleanUrl || "#";
+
+      requestAnimationFrame(() => {
+        sourceInput.focus();
+        sourceInput.select();
+      });
+
+      copyButton.addEventListener("click", async () => {
+        sourceInput.focus();
+        sourceInput.select();
+        try {
+          await navigator.clipboard.writeText(sourceUrl);
+          copyButton.textContent = "คัดลอกแล้ว";
+        } catch {
+          document.execCommand("copy");
+          copyButton.textContent = "เลือกไว้แล้ว กด Ctrl+C";
+        }
+      });
+    </script>
+  </body>
+</html>

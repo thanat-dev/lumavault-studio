@@ -32,11 +32,15 @@ function cleanPageUrlInput(value) {
   return current;
 }
 
+function sourceHelperUrl(value) {
+  return value ? `source-open.html?url=${encodeURIComponent(value)}` : "#";
+}
+
 function updateSourceUrl() {
   const value = cleanPageUrlInput(pageUrl.value);
   if (pageUrl.value.trim() !== value) pageUrl.value = value;
   sourceUrl.value = value ? `view-source:${value}` : "";
-  copySourceUrl.href = sourceUrl.value || "#";
+  copySourceUrl.href = sourceHelperUrl(value);
   return value;
 }
 
@@ -588,9 +592,9 @@ copySourceUrl.addEventListener("click", async (event) => {
 
   try {
     await copyText(sourceUrl.value);
-    setStatus("เปิด Source ในแท็บใหม่และคัดลอกลิงก์แล้ว ให้กด Ctrl+A / Ctrl+C จากแท็บ Source แล้วกลับมากด วาง Clipboard");
+    setStatus("คัดลอกลิงก์ Source แล้ว และเปิดแท็บช่วยเปิด Source ให้ใช้งานต่อ");
   } catch {
-    setStatus("เปิด Source ในแท็บใหม่แล้ว ถ้าคัดลอกลิงก์ไม่สำเร็จ ให้กด Ctrl+A / Ctrl+C จากแท็บ Source");
+    setStatus("เปิดแท็บช่วยเปิด Source แล้ว ถ้าคัดลอกไม่สำเร็จ ให้กดคัดลอกในแท็บใหม่");
   }
 });
 
