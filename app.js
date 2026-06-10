@@ -29,6 +29,40 @@ function updateSourceUrl() {
   sourceUrl.value = value ? `view-source:${value}` : "";
 }
 
+async function copyText(value) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return true;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  textarea.style.top = "0";
+  document.body.append(textarea);
+  textarea.focus();
+  textarea.select();
+  const copied = document.execCommand("copy");
+  textarea.remove();
+  return copied;
+}
+
+function openSourceTab(value) {
+  const opened = window.open(value, "_blank", "noopener");
+  if (opened) return true;
+
+  const link = document.createElement("a");
+  link.href = value;
+  link.target = "_blank";
+  link.rel = "noopener";
+  link.style.display = "none";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  return false;
+}
+
 async function pasteSourceFromClipboard() {
   if (!navigator.clipboard?.readText) {
     throw new Error("เบราว์เซอร์ไม่อนุญาตให้อ่าน Clipboard ให้กด Ctrl+V วางในช่อง Source เอง");
@@ -549,9 +583,18 @@ copySourceUrl.addEventListener("click", async () => {
     setStatus("กรุณาใส่ URL ก่อน");
     return;
   }
-  await navigator.clipboard.writeText(sourceUrl.value);
-  window.open(sourceUrl.value, "_blank", "noopener");
-  setStatus("เปิด Source แล้ว ให้กด Ctrl+A / Ctrl+C จากแท็บนั้น แล้วกลับมากด วาง Clipboard");
+
+  const opened = openSourceTab(sourceUrl.value);
+  try {
+    await copyText(sourceUrl.value);
+    setStatus(opened
+      ? "เปิด Source และคัดลอกลิงก์แล้ว ให้กด Ctrl+A / Ctrl+C จากแท็บ Source แล้วกลับมากด วาง Clipboard"
+      : "คัดลอกลิงก์ Source แล้ว ถ้าแท็บไม่เปิด ให้วางลิงก์ใน address bar แล้วกด Enter");
+  } catch {
+    setStatus(opened
+      ? "เปิด Source แล้ว แต่คัดลอกลิงก์ไม่สำเร็จ ให้กด Ctrl+A / Ctrl+C จากแท็บ Source"
+      : "เปิดแท็บไม่สำเร็จ ให้ copy ลิงก์ view-source ในช่องนี้ไปวาง address bar เอง");
+  }
 });
 
 pasteSourceButton?.addEventListener("click", async () => {
