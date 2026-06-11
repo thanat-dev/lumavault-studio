@@ -578,24 +578,25 @@ form.addEventListener("submit", async (event) => {
 pageUrl.addEventListener("input", updateSourceUrl);
 
 copySourceUrl.addEventListener("click", async (event) => {
+  event.preventDefault();
   const value = updateSourceUrl();
   if (!sourceUrl.value) {
-    event.preventDefault();
     setStatus("กรุณาใส่ URL ก่อน");
     return;
   }
   if (!/^https?:\/\//i.test(value)) {
-    event.preventDefault();
     setStatus("URL ต้องขึ้นต้นด้วย http:// หรือ https://");
     return;
   }
-
+  // window.open() must be called synchronously (before any await) to keep the
+  // trusted user-gesture — calling it after await causes Chrome to block the popup.
+  window.open(sourceHelperUrl(value), "_blank", "noopener,noreferrer");
   try {
     await copyText(sourceUrl.value);
-    setStatus("คัดลอกลิงก์ Source แล้ว และเปิดแท็บช่วยเปิด Source ให้ใช้งานต่อ");
   } catch {
-    setStatus("เปิดแท็บช่วยเปิด Source แล้ว ถ้าคัดลอกไม่สำเร็จ ให้กดคัดลอกในแท็บใหม่");
+    // clipboard copy is best-effort; the tab is already open
   }
+  setStatus("เปิดแท็บ Source Helper แล้ว — วาง Source ในแท็บนั้น ระบบจะส่งกลับอัตโนมัติ");
 });
 
 pasteSourceButton?.addEventListener("click", async () => {
@@ -615,6 +616,17 @@ tabs.forEach((tab) => {
     tabs.forEach((item) => item.classList.toggle("active", item === tab));
     if (lastPayload) renderRows(lastPayload);
   });
+});
+
+// Receive source content broadcast from source-open.html and auto-fill textarea
+const _sourceChannel = new BroadcastChannel("lumavault-source");
+_sourceChannel.addEventListener("message", (event) => {
+  if (event.data?.type === "source-content" && typeof event.data.content === "string" && event.data.content.length > 50) {
+    source.value = event.data.content;
+    const sizeKb = Math.max(1, Math.round(event.data.content.length / 1024));
+    setStatus(`วาง Source อัตโนมัติแล้ว (${sizeKb} KB) — พร้อมกด วิเคราะห์วิดีโอ`);
+    source.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
 });
 
 updateSourceUrl();
