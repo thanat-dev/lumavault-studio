@@ -45,42 +45,82 @@
           <div class="kanok-corner kanok-corner-bl" aria-hidden="true"></div>
           <div class="panel-header">
             <span>ข้อมูลต้นทาง</span>
+            <div class="plat-tabs" role="tablist" aria-label="เลือกแพลตฟอร์ม">
+              <button class="plat-tab active" type="button" data-plat="facebook" role="tab" aria-selected="true">Facebook</button>
+              <button class="plat-tab" type="button" data-plat="youtube" role="tab" aria-selected="false">YouTube</button>
+            </div>
             <span id="status" class="status">พร้อมใช้งาน</span>
           </div>
 
-          <label class="field">
-            <span>URL วิดีโอ Facebook</span>
-            <div class="input-row">
-              <span class="input-icon">01</span>
-              <input
-                id="pageUrl"
-                type="url"
-                placeholder="https://www.facebook.com/share/v/..."
-                autocomplete="off"
-              />
-            </div>
-          </label>
+          <div class="plat-chip facebook" id="platChip" aria-live="polite">Facebook Mode</div>
 
-          <div class="field">
-            <span>ลิงก์เปิด Page Source</span>
-            <div class="input-row">
-              <span class="input-icon">02</span>
-              <input id="sourceUrl" type="text" readonly />
-              <a class="icon-action" id="copySourceUrl" href="#" target="_blank" rel="noopener" title="เปิดหน้า view-source และคัดลอกลิงก์" aria-label="เปิดหน้า view-source และคัดลอกลิงก์">
-                เปิด Source
-              </a>
-              <button class="icon-action" id="pasteSource" type="button" title="วาง source จาก clipboard" aria-label="วาง source จาก clipboard">
-                วาง Clipboard
-              </button>
+          <!-- ── Facebook Section ── -->
+          <div id="fbSection">
+            <label class="field">
+              <span>URL วิดีโอ Facebook</span>
+              <div class="input-row">
+                <span class="input-icon">01</span>
+                <input
+                  id="pageUrl"
+                  type="url"
+                  placeholder="https://www.facebook.com/share/v/..."
+                  autocomplete="off"
+                />
+              </div>
+            </label>
+
+            <div class="field">
+              <span>ลิงก์เปิด Page Source</span>
+              <div class="input-row">
+                <span class="input-icon">02</span>
+                <input id="sourceUrl" type="text" readonly />
+                <a class="icon-action" id="copySourceUrl" href="#" target="_blank" rel="noopener" title="เปิดหน้า view-source และคัดลอกลิงก์" aria-label="เปิดหน้า view-source และคัดลอกลิงก์">
+                  เปิด Source
+                </a>
+                <button class="icon-action" id="pasteSource" type="button" title="วาง source จาก clipboard" aria-label="วาง source จาก clipboard">
+                  วาง Clipboard
+                </button>
+              </div>
             </div>
+
+            <label class="field">
+              <span>วาง Source ทั้งหน้า</span>
+              <textarea id="source" spellcheck="false" placeholder="วางข้อมูล view-source ทั้งหมดที่นี่"></textarea>
+            </label>
+
+            <button class="primary" type="submit">วิเคราะห์วิดีโอ</button>
           </div>
 
-          <label class="field">
-            <span>วาง Source ทั้งหน้า</span>
-            <textarea id="source" spellcheck="false" placeholder="วางข้อมูล view-source ทั้งหมดที่นี่"></textarea>
-          </label>
+          <!-- ── YouTube Section ── -->
+          <div id="ytSection" hidden>
+            <label class="field">
+              <span>YouTube URL</span>
+              <div class="input-row">
+                <span class="input-icon yt-icon">▶</span>
+                <input
+                  id="ytUrl"
+                  type="url"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  autocomplete="off"
+                />
+              </div>
+              <div class="yt-url-meta">
+                <span class="yt-url-badge" id="ytUrlBadge">youtube.com</span>
+                <small class="field-hint">วาง URL วิดีโอ, Shorts หรือ Live — ตรวจจับอัตโนมัติ</small>
+              </div>
+            </label>
 
-          <button class="primary" type="submit">วิเคราะห์วิดีโอ</button>
+            <div class="yt-type-row field">
+              <span class="field-label-sm">ประเภท</span>
+              <div class="yt-types" role="group" aria-label="ประเภทเนื้อหา YouTube">
+                <button class="yt-type active" type="button" data-type="video">Video</button>
+                <button class="yt-type" type="button" data-type="shorts">Shorts</button>
+                <button class="yt-type" type="button" data-type="live">Live</button>
+              </div>
+            </div>
+
+            <button class="primary" type="button" id="ytAnalyzeBtn">วิเคราะห์ YouTube</button>
+          </div>
         </section>
 
         <section class="result-panel" id="resultPanel" aria-live="polite" hidden>
