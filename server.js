@@ -50,6 +50,7 @@ const ytdlpNetworkArgs = [
   "--extractor-retries",
   "1",
   "--force-ipv4",
+  "--no-check-certificates",
   "--extractor-args",
   "youtube:player_client=web",
 ];
