@@ -52,7 +52,7 @@ const ytdlpNetworkArgs = [
   "--force-ipv4",
   "--no-check-certificates",
   "--extractor-args",
-  "youtube:player_client=web",
+  "youtube:player_client=android",
 ];
 
 async function resolveYtDlp() {
