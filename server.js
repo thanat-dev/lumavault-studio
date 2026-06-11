@@ -60,6 +60,16 @@ async function resolveYtDlp() {
   return null;
 }
 
+// ── Auto-update yt-dlp on startup (fixes SSL bugs in outdated versions) ──
+resolveYtDlp().then((bin) => {
+  if (!bin) return;
+  console.log("[yt-dlp] Starting background update...");
+  const up = spawn(bin, ["-U"], { stdio: "pipe" });
+  up.stdout.on("data", (d) => console.log("[yt-dlp update]", `${d}`.trim()));
+  up.stderr.on("data", (d) => console.log("[yt-dlp update]", `${d}`.trim()));
+  up.on("close", (code) => console.log(`[yt-dlp] Update exited with code ${code}`));
+}).catch(() => {});
+
 function formatCount(n) {
   if (!n) return "";
   if (n >= 1e9) return `${(n / 1e9).toFixed(1)}B`;
@@ -1138,7 +1148,7 @@ const server = createServer(async (req, res) => {
       }
       try {
         const info = await new Promise((resolve, reject) => {
-          const proc = spawn(ytdlp, ["--dump-json", "--no-playlist", "--no-check-certificate", "--legacy-server-connect", "--socket-timeout", "30", ytUrl]);
+          const proc = spawn(ytdlp, ["--dump-json", "--no-playlist", "--no-check-certificate", "--legacy-server-connect", "--force-ipv4", "--socket-timeout", "30", "--extractor-retries", "3", ytUrl]);
           let out = "";
           let err = "";
           proc.stdout.on("data", (d) => (out += d));
@@ -1229,8 +1239,8 @@ const server = createServer(async (req, res) => {
       }
 
       const args = outType === "mp3"
-        ? ["-f", fmtStr, "-x", "--audio-format", "mp3", "-o", output, "--no-playlist", "--no-check-certificate", "--legacy-server-connect", "--socket-timeout", "30", ytUrl]
-        : ["-f", fmtStr, "--merge-output-format", "mp4", "-o", output, "--no-playlist", "--no-check-certificate", "--legacy-server-connect", "--socket-timeout", "30", ytUrl];
+        ? ["-f", fmtStr, "-x", "--audio-format", "mp3", "-o", output, "--no-playlist", "--no-check-certificate", "--legacy-server-connect", "--force-ipv4", "--socket-timeout", "30", "--extractor-retries", "3", ytUrl]
+        : ["-f", fmtStr, "--merge-output-format", "mp4", "-o", output, "--no-playlist", "--no-check-certificate", "--legacy-server-connect", "--force-ipv4", "--socket-timeout", "30", "--extractor-retries", "3", ytUrl];
 
       const proc = spawn(ytdlp, args);
       proc.stdout.on("data", (d) => {
