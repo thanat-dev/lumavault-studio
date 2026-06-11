@@ -827,11 +827,22 @@ ytUrlInput?.addEventListener("input", () => {
     updateSourceUrl();
     return;
   }
+  const v = val.toLowerCase();
+
+  // ── Auto-detect content type from URL path ──
+  let detectedType = "video";
+  if (v.includes("/shorts/")) detectedType = "shorts";
+  else if (v.includes("/live") || v.includes("feature=live")) detectedType = "live";
+
+  if (val && detectedType !== ytContentType) {
+    ytContentType = detectedType;
+    ytTypeBtns.forEach((b) => b.classList.toggle("active", b.dataset.type === detectedType));
+  }
+
   if (ytUrlBadge && val) {
-    const v = val.toLowerCase();
     ytUrlBadge.textContent = v.includes("youtu.be") ? "youtu.be" :
-      v.includes("/shorts/") ? "Shorts" :
-      v.includes("/live") ? "Live" : "youtube.com";
+      detectedType === "shorts" ? "Shorts" :
+      detectedType === "live"   ? "Live"   : "youtube.com";
   }
 });
 
