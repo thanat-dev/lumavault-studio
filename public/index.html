@@ -110,13 +110,11 @@
               </div>
             </label>
 
-            <div class="yt-type-row field">
-              <span class="field-label-sm">ประเภท</span>
-              <div class="yt-types" role="group" aria-label="ประเภทเนื้อหา YouTube">
-                <button class="yt-type active" type="button" data-type="video">Video</button>
-                <button class="yt-type" type="button" data-type="shorts">Shorts</button>
-                <button class="yt-type" type="button" data-type="live">Live</button>
-              </div>
+            <!-- type pills hidden — auto-detected from URL -->
+            <div id="ytTypePills" hidden aria-hidden="true">
+              <button class="yt-type active" type="button" data-type="video">Video</button>
+              <button class="yt-type" type="button" data-type="shorts">Shorts</button>
+              <button class="yt-type" type="button" data-type="live">Live</button>
             </div>
 
             <button class="primary" type="button" id="ytAnalyzeBtn">วิเคราะห์ YouTube</button>
