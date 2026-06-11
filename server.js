@@ -41,6 +41,7 @@ const ytdlpCandidates = [
   "/usr/bin/yt-dlp",
 ];
 const ytJobs = new Map();
+const ytdlpInfoTimeoutMs = 25000;
 
 async function resolveYtDlp() {
   const { access } = await import("node:fs/promises");
@@ -66,6 +67,39 @@ function formatCount(n) {
   if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
   if (n >= 1e3) return `${Math.round(n / 1e3)}K`;
   return `${n}`;
+}
+
+function runCommand(command, args, timeoutMs = ytdlpInfoTimeoutMs) {
+  return new Promise((resolve, reject) => {
+    const proc = spawn(command, args, { windowsHide: true });
+    let out = "";
+    let err = "";
+    let settled = false;
+    const timer = setTimeout(() => {
+      settled = true;
+      proc.kill("SIGKILL");
+      reject(new Error(`yt-dlp timed out after ${Math.round(timeoutMs / 1000)}s`));
+    }, timeoutMs);
+
+    proc.stdout.on("data", (d) => (out += d));
+    proc.stderr.on("data", (d) => (err += d));
+    proc.on("error", (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(error);
+    });
+    proc.on("close", (code) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (code !== 0) {
+        reject(new Error((err.trim().split("\n").pop() || "yt-dlp failed").slice(-300)));
+        return;
+      }
+      resolve({ out, err });
+    });
+  });
 }
 
 const mimeTypes = {
@@ -1123,6 +1157,21 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === "GET" && url.pathname === "/api/yt-health") {
+      const ytdlp = await resolveYtDlp();
+      if (!ytdlp) {
+        sendJson(res, 503, { ok: false, error: "yt-dlp ไม่ได้ติดตั้งในเซิร์ฟเวอร์นี้" });
+        return;
+      }
+      try {
+        const { out } = await runCommand(ytdlp, ["--version"], 8000);
+        sendJson(res, 200, { ok: true, bin: ytdlp, version: out.trim() });
+      } catch (error) {
+        sendJson(res, 502, { ok: false, bin: ytdlp, error: error.message || "yt-dlp health check failed" });
+      }
+      return;
+    }
+
     // ── YouTube: fetch info via yt-dlp ──────────────────────
     if (req.method === "POST" && url.pathname === "/api/yt-info") {
       const body = JSON.parse(await collectBody(req, 1024 * 1024));
@@ -1137,17 +1186,17 @@ const server = createServer(async (req, res) => {
         return;
       }
       try {
-        const info = await new Promise((resolve, reject) => {
-          const proc = spawn(ytdlp, ["--dump-json", "--no-playlist", ytUrl]);
-          let out = "";
-          let err = "";
-          proc.stdout.on("data", (d) => (out += d));
-          proc.stderr.on("data", (d) => (err += d));
-          proc.on("close", (code) => {
-            if (code !== 0) { reject(new Error((err.trim().split("\n").pop() || "yt-dlp failed").slice(-300))); return; }
-            try { resolve(JSON.parse(out)); } catch { reject(new Error("Invalid yt-dlp output")); }
-          });
-        });
+        const { out } = await runCommand(ytdlp, [
+          "--dump-json",
+          "--no-playlist",
+          "--socket-timeout",
+          "15",
+          "--retries",
+          "2",
+          ytUrl,
+        ], ytdlpInfoTimeoutMs);
+        let info;
+        try { info = JSON.parse(out); } catch { throw new Error("Invalid yt-dlp output"); }
 
         const rawFormats = (info.formats || []).filter((f) => f.url && f.ext !== "mhtml");
         const videoHeights = [...new Set(
@@ -1229,8 +1278,8 @@ const server = createServer(async (req, res) => {
       }
 
       const args = outType === "mp3"
-        ? ["-f", fmtStr, "-x", "--audio-format", "mp3", "-o", output, "--no-playlist", ytUrl]
-        : ["-f", fmtStr, "--merge-output-format", "mp4", "-o", output, "--no-playlist", ytUrl];
+        ? ["-f", fmtStr, "-x", "--audio-format", "mp3", "--socket-timeout", "15", "--retries", "2", "-o", output, "--no-playlist", ytUrl]
+        : ["-f", fmtStr, "--merge-output-format", "mp4", "--socket-timeout", "15", "--retries", "2", "-o", output, "--no-playlist", ytUrl];
 
       const proc = spawn(ytdlp, args);
       proc.stdout.on("data", (d) => {
