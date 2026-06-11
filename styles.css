@@ -1050,3 +1050,207 @@ textarea::placeholder { color: rgba(100,90,70,0.45); }
   background: #22c55e;
   box-shadow: 0 0 6px rgba(34, 197, 94, 0.38);
 }
+
+/* ── Platform Tab Switcher ───────────────────────────────── */
+.plat-tabs {
+  display: flex;
+  gap: 3px;
+  background: rgba(200, 148, 26, 0.09);
+  border-radius: 9px;
+  padding: 3px;
+  border: 1px solid var(--line);
+}
+
+.plat-tab {
+  border: none;
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  cursor: pointer;
+  background: transparent;
+  color: var(--muted);
+  transition: background .18s, color .18s, box-shadow .18s;
+}
+
+.plat-tab.active {
+  background: var(--gold);
+  color: var(--ink);
+  box-shadow: 0 2px 6px rgba(200, 148, 26, 0.32);
+}
+
+/* ── Platform Mode Chip ──────────────────────────────────── */
+.plat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 11px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  margin-bottom: 4px;
+  transition: background .22s, color .22s;
+}
+
+.plat-chip.facebook {
+  background: #e8f0fe;
+  color: #1a56db;
+}
+
+.plat-chip.youtube {
+  background: #fde8e8;
+  color: #b91c1c;
+}
+
+/* ── YT Input Extras ─────────────────────────────────────── */
+.yt-icon {
+  color: #cc0000;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.yt-url-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+  flex-wrap: wrap;
+}
+
+.yt-url-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  background: #fde8e8;
+  color: #b91c1c;
+  transition: background .2s, color .2s;
+}
+
+.field-hint {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  opacity: .7;
+}
+
+/* ── YouTube Content Type Row ────────────────────────────── */
+.yt-type-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.field-label-sm {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.yt-types {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.yt-type {
+  border: 1.5px solid var(--gold-m);
+  border-radius: 20px;
+  padding: 5px 15px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  background: transparent;
+  color: var(--muted);
+  transition: all .18s;
+}
+
+.yt-type.active {
+  background: var(--gold);
+  color: var(--ink);
+  border-color: var(--gold);
+  box-shadow: 0 2px 8px rgba(200, 148, 26, 0.3);
+}
+
+/* ── YouTube Result Card ─────────────────────────────────── */
+.yt-card-wrap {
+  grid-column: 1 / -1;
+}
+
+.yt-card {
+  display: grid;
+  grid-template-columns: minmax(160px, 240px) 1fr;
+  gap: 16px;
+  align-items: start;
+  width: 100%;
+}
+
+.yt-thumb {
+  width: 100%;
+  aspect-ratio: 16/9;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold);
+  font-size: 36px;
+}
+
+.yt-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.yt-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.yt-info strong {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.yt-type-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.yt-type-chip.video  { background: #fff3cd; color: #856404; }
+.yt-type-chip.shorts { background: #fde8e8; color: #b91c1c; }
+.yt-type-chip.live   { background: #fde8e8; color: #b91c1c; animation: livePulse 1.2s ease infinite; }
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .55; }
+}
+
+@media (max-width: 760px) {
+  .yt-card { grid-template-columns: 1fr; }
+  .yt-type-row { gap: 8px; }
+}
