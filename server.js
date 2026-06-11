@@ -41,7 +41,7 @@ const ytdlpCandidates = [
   "/usr/bin/yt-dlp",
 ];
 const ytJobs = new Map();
-const ytdlpInfoTimeoutMs = 25000;
+const ytdlpInfoTimeoutMs = 70000;
 
 async function resolveYtDlp() {
   const { access } = await import("node:fs/promises");
@@ -1190,9 +1190,10 @@ const server = createServer(async (req, res) => {
           "--dump-json",
           "--no-playlist",
           "--socket-timeout",
-          "15",
+          "20",
           "--retries",
           "2",
+          "--force-ipv4",
           ytUrl,
         ], ytdlpInfoTimeoutMs);
         let info;
@@ -1278,8 +1279,8 @@ const server = createServer(async (req, res) => {
       }
 
       const args = outType === "mp3"
-        ? ["-f", fmtStr, "-x", "--audio-format", "mp3", "--socket-timeout", "15", "--retries", "2", "-o", output, "--no-playlist", ytUrl]
-        : ["-f", fmtStr, "--merge-output-format", "mp4", "--socket-timeout", "15", "--retries", "2", "-o", output, "--no-playlist", ytUrl];
+        ? ["-f", fmtStr, "-x", "--audio-format", "mp3", "--socket-timeout", "20", "--retries", "2", "--force-ipv4", "-o", output, "--no-playlist", ytUrl]
+        : ["-f", fmtStr, "--merge-output-format", "mp4", "--socket-timeout", "20", "--retries", "2", "--force-ipv4", "-o", output, "--no-playlist", ytUrl];
 
       const proc = spawn(ytdlp, args);
       proc.stdout.on("data", (d) => {
