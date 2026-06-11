@@ -541,26 +541,24 @@ function render(payload) {
   renderRows(payload);
 }
 
-// ── Analyze Progress Overlay ────────────────────────────────
-const _overlayEl = (() => {
+// ── Inline Analyze Progress (replaces the submit button) ────
+const _submitBtn = form.querySelector("button[type='submit']");
+const _inlineEl = (() => {
   const el = document.createElement("div");
-  el.className = "analyze-overlay";
-  el.id = "analyzeOverlay";
+  el.className = "analyze-inline";
   el.setAttribute("aria-live", "polite");
-  el.setAttribute("aria-atomic", "true");
   el.hidden = true;
   el.innerHTML = `
-    <div class="overlay-card">
-      <div class="kanok-spinner" aria-hidden="true"></div>
-      <h2 class="overlay-title">กำลังวิเคราะห์วิดีโอ</h2>
-      <div class="overlay-progress-track">
-        <div class="overlay-fill" id="_oFill" style="width:0%"></div>
+    <div class="ai-bar-wrap"><div class="ai-bar" id="_aBar" style="width:0%"></div></div>
+    <div class="ai-body">
+      <div class="ai-left">
+        <span class="ai-label" id="_aLabel">กำลังเตรียมการ...</span>
+        <span class="ai-stage" id="_aStage">STAGE — / 6</span>
       </div>
-      <div class="overlay-pct" id="_oPct">0%</div>
-      <p class="overlay-msg" id="_oMsg">กำลังเตรียมการ...</p>
-      <div class="overlay-dots" id="_oDots" aria-hidden="true"></div>
-    </div>`;
-  document.body.appendChild(el);
+      <div class="ai-pct" id="_aPct">0%</div>
+    </div>
+    <div class="ai-dots" id="_aDots" aria-hidden="true"></div>`;
+  _submitBtn.insertAdjacentElement("afterend", el);
   return el;
 })();
 
@@ -581,27 +579,30 @@ function _setDots(active) {
   _stages.forEach((_, i) => {
     const d = document.getElementById(`_od${i}`);
     if (!d) return;
-    d.className = i < active ? "o-dot done" : i === active ? "o-dot active" : "o-dot";
+    d.className = i < active ? "ai-dot done" : i === active ? "ai-dot active" : "ai-dot";
   });
 }
 
-function startOverlay() {
-  const fill = document.getElementById("_oFill");
-  const pct  = document.getElementById("_oPct");
-  const msg  = document.getElementById("_oMsg");
-  const dots = document.getElementById("_oDots");
+function startInline() {
+  const bar   = document.getElementById("_aBar");
+  const pct   = document.getElementById("_aPct");
+  const label = document.getElementById("_aLabel");
+  const stage = document.getElementById("_aStage");
+  const dots  = document.getElementById("_aDots");
   _oPct = 0; _oStageIdx = 0;
-  if (fill) fill.style.width = "0%";
-  if (pct)  pct.textContent  = "0%";
-  if (msg)  msg.textContent  = "กำลังเตรียมการ...";
+  if (bar)   bar.style.width    = "0%";
+  if (pct)   pct.textContent    = "0%";
+  if (label) label.textContent  = "กำลังเตรียมการ...";
+  if (stage) stage.textContent  = `STAGE — / ${_stages.length}`;
   if (dots) {
     dots.replaceChildren();
     _stages.forEach((_, i) => {
       const d = document.createElement("div");
-      d.className = "o-dot"; d.id = `_od${i}`; dots.appendChild(d);
+      d.className = "ai-dot"; d.id = `_od${i}`; dots.appendChild(d);
     });
   }
-  _overlayEl.hidden = false;
+  _submitBtn.hidden = true;
+  _inlineEl.hidden  = false;
   clearInterval(_oTimer);
   _oTimer = setInterval(() => {
     const target = _stagePcts[_oStageIdx] ?? 92;
@@ -609,47 +610,56 @@ function startOverlay() {
     _oPct = Math.min(_oPct, target);
     if (_oPct >= target - 0.5 && _oStageIdx < _stages.length - 1) {
       _oStageIdx++;
-      const msgEl = document.getElementById("_oMsg");
-      if (msgEl) {
-        msgEl.style.opacity = "0";
-        setTimeout(() => { msgEl.textContent = _stages[_oStageIdx - 1]; msgEl.style.opacity = "1"; }, 160);
-      }
+      const lEl = document.getElementById("_aLabel");
+      const sEl = document.getElementById("_aStage");
+      if (lEl) { lEl.style.opacity = "0"; setTimeout(() => { lEl.textContent = _stages[_oStageIdx - 1]; lEl.style.opacity = "1"; }, 160); }
+      if (sEl) sEl.textContent = `STAGE ${_oStageIdx} / ${_stages.length}`;
       _setDots(_oStageIdx);
     }
-    if (fill) fill.style.width = `${Math.min(_oPct, 93)}%`;
-    if (pct)  pct.textContent  = `${Math.round(Math.min(_oPct, 93))}%`;
+    if (bar) bar.style.width = `${Math.min(_oPct, 93)}%`;
+    if (pct) pct.textContent  = `${Math.round(Math.min(_oPct, 93))}%`;
   }, 140);
 }
 
-function finishOverlay(success = true) {
+function finishInline(success = true) {
   clearInterval(_oTimer);
-  const fill = document.getElementById("_oFill");
-  const pct  = document.getElementById("_oPct");
-  const msg  = document.getElementById("_oMsg");
-  if (fill) { fill.style.width = "100%"; fill.classList.toggle("error", !success); }
-  if (pct)  pct.textContent  = success ? "100%" : "—";
-  if (msg)  msg.textContent  = success ? "✓ วิเคราะห์เสร็จสิ้น!" : "เกิดข้อผิดพลาด";
+  const bar   = document.getElementById("_aBar");
+  const pct   = document.getElementById("_aPct");
+  const label = document.getElementById("_aLabel");
+  const stage = document.getElementById("_aStage");
+  if (bar)   { bar.style.width = "100%"; bar.classList.toggle("error", !success); }
+  if (pct)   pct.textContent   = success ? "100%" : "!";
+  if (label) label.textContent = success ? "✓ วิเคราะห์เสร็จสิ้น!" : "เกิดข้อผิดพลาด";
+  if (stage) stage.textContent = success ? `STAGE ${_stages.length} / ${_stages.length} — COMPLETE` : "ERROR";
   _setDots(success ? _stages.length : _oStageIdx);
   setTimeout(() => {
-    _overlayEl.hidden = true;
-    if (fill) { fill.classList.remove("error"); fill.style.width = "0%"; }
+    _inlineEl.hidden  = true;
+    _submitBtn.hidden = false;
+    if (bar) { bar.classList.remove("error"); bar.style.width = "0%"; }
     _oPct = 0; _oStageIdx = 0;
-  }, success ? 650 : 1400);
+  }, success ? 700 : 1500);
 }
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const submit = form.querySelector("button[type='submit']");
   submit.disabled = true;
+
+  // validate before showing progress
+  const sourceValue = source.value;
+  if (sourceValue.trim().length < 50) {
+    setStatus("เกิดข้อผิดพลาด");
+    resultPanel.hidden = false;
+    videoCard.replaceChildren();
+    resultsEl.innerHTML = `<div class="table-empty">กรุณาเปิด Source จากเบราว์เซอร์ที่ล็อกอิน Facebook แล้วคัดลอกทั้งหน้า จากนั้นกด วาง Clipboard</div>`;
+    submit.disabled = false;
+    return;
+  }
+
   setStatus("กำลังวิเคราะห์");
-  startOverlay();
+  startInline();
 
   try {
-    let sourceValue = source.value;
-    if (sourceValue.trim().length < 50) {
-      throw new Error("กรุณาเปิด Source จากเบราว์เซอร์ที่ล็อกอิน Facebook แล้วคัดลอกทั้งหน้า จากนั้นกด วาง Clipboard");
-    }
-
     const response = await fetch(apiUrl("/api/extract"), {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -660,11 +670,11 @@ form.addEventListener("submit", async (event) => {
     });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error || "Analyze failed");
-    finishOverlay(true);
+    finishInline(true);
     render(payload);
     setStatus((payload.items || []).some(isClientUsable) ? "พบไฟล์ที่ใช้งานได้" : "ไม่พบไฟล์ที่ดาวน์โหลดได้");
   } catch (error) {
-    finishOverlay(false);
+    finishInline(false);
     resultPanel.hidden = false;
     videoCard.replaceChildren();
     resultsEl.innerHTML = `<div class="table-empty">${error.message}</div>`;
