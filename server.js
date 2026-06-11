@@ -1187,6 +1187,7 @@ const server = createServer(async (req, res) => {
       }
       try {
         const { out } = await runCommand(ytdlp, [
+          "--ignore-config",
           "--dump-json",
           "--no-playlist",
           "--socket-timeout",
@@ -1279,8 +1280,8 @@ const server = createServer(async (req, res) => {
       }
 
       const args = outType === "mp3"
-        ? ["-f", fmtStr, "-x", "--audio-format", "mp3", "--socket-timeout", "20", "--retries", "2", "--force-ipv4", "-o", output, "--no-playlist", ytUrl]
-        : ["-f", fmtStr, "--merge-output-format", "mp4", "--socket-timeout", "20", "--retries", "2", "--force-ipv4", "-o", output, "--no-playlist", ytUrl];
+        ? ["--ignore-config", "-f", fmtStr, "-x", "--audio-format", "mp3", "--socket-timeout", "20", "--retries", "2", "--force-ipv4", "-o", output, "--no-playlist", ytUrl]
+        : ["--ignore-config", "-f", fmtStr, "--merge-output-format", "mp4", "--socket-timeout", "20", "--retries", "2", "--force-ipv4", "-o", output, "--no-playlist", ytUrl];
 
       const proc = spawn(ytdlp, args);
       proc.stdout.on("data", (d) => {
