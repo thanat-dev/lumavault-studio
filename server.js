@@ -1138,7 +1138,7 @@ const server = createServer(async (req, res) => {
       }
       try {
         const info = await new Promise((resolve, reject) => {
-          const proc = spawn(ytdlp, ["--dump-json", "--no-playlist", "--no-check-certificate", "--socket-timeout", "30", ytUrl]);
+          const proc = spawn(ytdlp, ["--dump-json", "--no-playlist", "--no-check-certificate", "--legacy-server-connect", "--socket-timeout", "30", ytUrl]);
           let out = "";
           let err = "";
           proc.stdout.on("data", (d) => (out += d));
@@ -1229,8 +1229,8 @@ const server = createServer(async (req, res) => {
       }
 
       const args = outType === "mp3"
-        ? ["-f", fmtStr, "-x", "--audio-format", "mp3", "-o", output, "--no-playlist", "--no-check-certificate", "--socket-timeout", "30", ytUrl]
-        : ["-f", fmtStr, "--merge-output-format", "mp4", "-o", output, "--no-playlist", "--no-check-certificate", "--socket-timeout", "30", ytUrl];
+        ? ["-f", fmtStr, "-x", "--audio-format", "mp3", "-o", output, "--no-playlist", "--no-check-certificate", "--legacy-server-connect", "--socket-timeout", "30", ytUrl]
+        : ["-f", fmtStr, "--merge-output-format", "mp4", "-o", output, "--no-playlist", "--no-check-certificate", "--legacy-server-connect", "--socket-timeout", "30", ytUrl];
 
       const proc = spawn(ytdlp, args);
       proc.stdout.on("data", (d) => {
