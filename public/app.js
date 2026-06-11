@@ -10,6 +10,19 @@ const copySourceUrl = document.querySelector("#copySourceUrl");
 const pasteSourceButton = document.querySelector("#pasteSource");
 const tabs = [...document.querySelectorAll(".tab")];
 
+// ── Platform switcher refs ───────────────────────────────
+const platTabs   = [...document.querySelectorAll(".plat-tab")];
+const platChipEl = document.getElementById("platChip");
+const fbSection  = document.getElementById("fbSection");
+const ytSection  = document.getElementById("ytSection");
+const ytUrlInput = document.getElementById("ytUrl");
+const ytAnalyzeBtn = document.getElementById("ytAnalyzeBtn");
+const ytTypeBtns = [...document.querySelectorAll(".yt-type")];
+const ytUrlBadge = document.getElementById("ytUrlBadge");
+
+let platform     = "facebook";
+let ytContentType = "video";
+
 let lastPayload = null;
 let activeTab = "mp4";
 
@@ -562,7 +575,7 @@ const _inlineEl = (() => {
   return el;
 })();
 
-const _stages = [
+const _fbStages = [
   "กำลังตรวจสอบ Source HTML...",
   "วิเคราะห์โครงสร้างหน้า Facebook...",
   "สกัดลิงก์สื่อจาก HTML...",
@@ -570,10 +583,24 @@ const _stages = [
   "ประมวลผล Meta & ข้อมูลคุณภาพ...",
   "จัดเรียงผลลัพธ์...",
 ];
-const _stagePcts = [12, 28, 46, 63, 79, 91];
-let _oTimer = null;
-let _oPct = 0;
-let _oStageIdx = 0;
+const _fbStagePcts = [12, 28, 46, 63, 79, 91];
+
+const _ytStages = [
+  "กำลังตรวจสอบ YouTube URL...",
+  "ดึงข้อมูลวิดีโอด้วย yt-dlp...",
+  "วิเคราะห์ stream คุณภาพต่างๆ...",
+  "ตรวจสอบขนาดไฟล์...",
+  "กรองรูปแบบที่ดีที่สุด...",
+  "จัดเตรียมตัวเลือกดาวน์โหลด...",
+];
+const _ytStagePcts = [10, 25, 45, 62, 78, 90];
+
+let _stages     = _fbStages;
+let _stagePcts  = _fbStagePcts;
+let _oTimer     = null;
+let _oPct       = 0;
+let _oStageIdx  = 0;
+let _activeBtn  = null;
 
 function _setDots(active) {
   _stages.forEach((_, i) => {
@@ -583,7 +610,12 @@ function _setDots(active) {
   });
 }
 
-function startInline() {
+function startInline(btn, stages, stagePcts) {
+  _activeBtn  = btn;
+  _stages     = stages    || _fbStages;
+  _stagePcts  = stagePcts || _fbStagePcts;
+  btn.insertAdjacentElement("afterend", _inlineEl);
+
   const bar   = document.getElementById("_aBar");
   const pct   = document.getElementById("_aPct");
   const label = document.getElementById("_aLabel");
@@ -601,8 +633,8 @@ function startInline() {
       d.className = "ai-dot"; d.id = `_od${i}`; dots.appendChild(d);
     });
   }
-  _submitBtn.hidden = true;
-  _inlineEl.hidden  = false;
+  btn.hidden       = true;
+  _inlineEl.hidden = false;
   clearInterval(_oTimer);
   _oTimer = setInterval(() => {
     const target = _stagePcts[_oStageIdx] ?? 92;
@@ -629,12 +661,12 @@ function finishInline(success = true) {
   const stage = document.getElementById("_aStage");
   if (bar)   { bar.style.width = "100%"; bar.classList.toggle("error", !success); }
   if (pct)   pct.textContent   = success ? "100%" : "!";
-  if (label) label.textContent = success ? "✓ วิเคราะห์เสร็จสิ้น!" : "เกิดข้อผิดพลาด";
+  if (label) label.textContent = success ? "✓ เสร็จสิ้น!" : "เกิดข้อผิดพลาด";
   if (stage) stage.textContent = success ? `STAGE ${_stages.length} / ${_stages.length} — COMPLETE` : "ERROR";
   _setDots(success ? _stages.length : _oStageIdx);
   setTimeout(() => {
-    _inlineEl.hidden  = true;
-    _submitBtn.hidden = false;
+    _inlineEl.hidden = true;
+    if (_activeBtn) { _activeBtn.hidden = false; _activeBtn = null; }
     if (bar) { bar.classList.remove("error"); bar.style.width = "0%"; }
     _oPct = 0; _oStageIdx = 0;
   }, success ? 700 : 1500);
@@ -642,10 +674,15 @@ function finishInline(success = true) {
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
+
+  if (platform === "youtube") {
+    await ytAnalyze();
+    return;
+  }
+
   const submit = form.querySelector("button[type='submit']");
   submit.disabled = true;
 
-  // validate before showing progress
   const sourceValue = source.value;
   if (sourceValue.trim().length < 50) {
     setStatus("เกิดข้อผิดพลาด");
@@ -657,7 +694,7 @@ form.addEventListener("submit", async (event) => {
   }
 
   setStatus("กำลังวิเคราะห์");
-  startInline();
+  startInline(_submitBtn, _fbStages, _fbStagePcts);
 
   try {
     const response = await fetch(apiUrl("/api/extract"), {
@@ -684,7 +721,11 @@ form.addEventListener("submit", async (event) => {
   }
 });
 
-pageUrl.addEventListener("input", updateSourceUrl);
+pageUrl.addEventListener("input", () => {
+  updateSourceUrl();
+  const det = detectPlatformFromUrl(pageUrl.value);
+  if (det && det !== platform) setPlatform(det);
+});
 
 copySourceUrl.addEventListener("click", async (event) => {
   event.preventDefault();
@@ -737,6 +778,269 @@ _sourceChannel.addEventListener("message", (event) => {
     source.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 });
+
+// ── Platform Switching ────────────────────────────────────
+function detectPlatformFromUrl(value) {
+  const v = String(value || "").toLowerCase();
+  if (v.includes("youtube.com") || v.includes("youtu.be")) return "youtube";
+  if (v.includes("facebook.com") || v.includes("fb.com") || v.includes("fb.watch")) return "facebook";
+  return null;
+}
+
+function setPlatform(p) {
+  platform = p;
+  platTabs.forEach((tab) => {
+    const active = tab.dataset.plat === p;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", active ? "true" : "false");
+  });
+  if (fbSection) fbSection.hidden = p !== "facebook";
+  if (ytSection) ytSection.hidden = p !== "youtube";
+  if (platChipEl) {
+    platChipEl.textContent = p === "youtube" ? "YouTube Mode" : "Facebook Mode";
+    platChipEl.className   = `plat-chip ${p}`;
+  }
+  setStatus("พร้อมใช้งาน");
+  resultPanel.hidden = true;
+  videoCard.replaceChildren();
+  resultsEl.replaceChildren();
+}
+
+platTabs.forEach((tab) => {
+  tab.addEventListener("click", () => setPlatform(tab.dataset.plat));
+});
+
+ytTypeBtns.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    ytContentType = btn.dataset.type;
+    ytTypeBtns.forEach((b) => b.classList.toggle("active", b === btn));
+  });
+});
+
+ytUrlInput?.addEventListener("input", () => {
+  const val = ytUrlInput.value;
+  const det = detectPlatformFromUrl(val);
+  if (det === "facebook") {
+    pageUrl.value = val;
+    ytUrlInput.value = "";
+    setPlatform("facebook");
+    updateSourceUrl();
+    return;
+  }
+  if (ytUrlBadge && val) {
+    const v = val.toLowerCase();
+    ytUrlBadge.textContent = v.includes("youtu.be") ? "youtu.be" :
+      v.includes("/shorts/") ? "Shorts" :
+      v.includes("/live") ? "Live" : "youtube.com";
+  }
+});
+
+ytAnalyzeBtn?.addEventListener("click", ytAnalyze);
+
+// ── YouTube Analyze ────────────────────────────────────────
+async function ytAnalyze() {
+  const ytUrl = ytUrlInput?.value.trim() || "";
+  if (!ytUrl.startsWith("http")) {
+    setStatus("เกิดข้อผิดพลาด");
+    resultPanel.hidden = false;
+    videoCard.replaceChildren();
+    resultsEl.innerHTML = `<div class="table-empty">กรุณาใส่ YouTube URL</div>`;
+    return;
+  }
+
+  setStatus("กำลังวิเคราะห์ YouTube");
+  startInline(ytAnalyzeBtn, _ytStages, _ytStagePcts);
+
+  try {
+    const response = await fetch(apiUrl("/api/yt-info"), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url: ytUrl }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "yt-dlp analyze failed");
+    finishInline(true);
+    renderYTResult(data);
+    setStatus("พบวิดีโอ YouTube — เลือกคุณภาพแล้วกด โหลด");
+  } catch (error) {
+    finishInline(false);
+    resultPanel.hidden = false;
+    videoCard.replaceChildren();
+    resultsEl.innerHTML = `<div class="table-empty">${error.message}</div>`;
+    setStatus("เกิดข้อผิดพลาด");
+  }
+}
+
+// ── YouTube Result Renderer ───────────────────────────────
+function formatBytes(bytes) {
+  if (!bytes) return "";
+  if (bytes >= 1e9) return `~${(bytes / 1e9).toFixed(1)} GB`;
+  if (bytes >= 1e6) return `~${Math.round(bytes / 1e6)} MB`;
+  return `~${Math.round(bytes / 1e3)} KB`;
+}
+
+function renderYTResult(data) {
+  const { meta, formats } = data;
+  lastPayload = null;
+  resultPanel.hidden = false;
+
+  videoCard.replaceChildren();
+  const wrap = document.createElement("div");
+  wrap.className = "yt-card-wrap";
+  const card = document.createElement("div");
+  card.className = "yt-card";
+
+  const thumbEl = document.createElement("div");
+  thumbEl.className = "yt-thumb";
+  if (meta.thumbnail) {
+    const img = document.createElement("img");
+    img.src = meta.thumbnail;
+    img.alt = meta.title;
+    img.onerror = () => { thumbEl.textContent = "▶"; };
+    thumbEl.append(img);
+  } else {
+    thumbEl.textContent = "▶";
+  }
+
+  const infoEl = document.createElement("div");
+  infoEl.className = "yt-info";
+
+  const titleEl = document.createElement("strong");
+  titleEl.textContent = meta.title || "YouTube Video";
+
+  const metaLine = document.createElement("div");
+  metaLine.className = "video-meta";
+
+  const chanChip = document.createElement("span");
+  chanChip.textContent = meta.channel || "YouTube";
+
+  const durChip = document.createElement("span");
+  durChip.textContent = meta.duration || "—";
+
+  const typeChip = document.createElement("span");
+  typeChip.className = `yt-type-chip ${meta.contentType || "video"}`;
+  typeChip.textContent = meta.contentType === "live" ? "🔴 LIVE" :
+    meta.contentType === "shorts" ? "SHORTS" : "VIDEO";
+
+  metaLine.append(chanChip, durChip, typeChip);
+
+  const viewEl = document.createElement("small");
+  viewEl.textContent = [
+    meta.viewCount ? `${meta.viewCount} views` : "",
+    meta.uploadDate || "",
+  ].filter(Boolean).join(" · ");
+
+  infoEl.append(titleEl, metaLine, viewEl);
+  card.append(thumbEl, infoEl);
+  wrap.append(card);
+  videoCard.append(wrap);
+
+  resultsEl.replaceChildren();
+  for (const fmt of (formats || [])) {
+    const row = document.createElement("div");
+    row.className = "download-row render";
+
+    const quality = document.createElement("strong");
+    quality.textContent = fmt.quality;
+
+    const method = document.createElement("span");
+    method.textContent = fmt.type === "mp3" ? "Audio" : "yt-dlp";
+
+    const actionCell = document.createElement("div");
+    actionCell.className = "action-cell";
+
+    const note = document.createElement("small");
+    note.textContent = formatBytes(fmt.size);
+
+    const rowStatus = document.createElement("span");
+    rowStatus.className = "row-status render";
+    rowStatus.textContent = "พร้อมดาวน์โหลด";
+
+    const progress = document.createElement("div");
+    progress.className = "render-progress";
+    progress.hidden = true;
+    progress.append(document.createElement("span"));
+
+    const btn = document.createElement("button");
+    btn.className = "download render";
+    btn.type = "button";
+    btn.textContent = "โหลด";
+    btn.addEventListener("click", () => startYtDownload(fmt, btn, note, rowStatus, progress));
+
+    actionCell.append(btn, rowStatus, progress, note);
+    row.append(quality, method, actionCell);
+    resultsEl.append(row);
+  }
+}
+
+// ── YouTube Download Job ──────────────────────────────────
+async function startYtDownload(fmt, btn, note, rowStatusEl, progressBar) {
+  const ytUrl = ytUrlInput?.value.trim() || "";
+  if (!ytUrl) { note.textContent = "ไม่พบ URL"; return; }
+  btn.disabled = true;
+  btn.textContent = "0%";
+  note.textContent = "กำลังส่งงานดาวน์โหลด...";
+  progressBar.hidden = false;
+  progressBar.classList.remove("error");
+  progressBar.querySelector("span").style.width = "2%";
+
+  try {
+    const res = await fetch(apiUrl("/api/yt-render"), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url: ytUrl, formatId: fmt.id, type: fmt.type }),
+    });
+    const payload = await res.json();
+    if (!res.ok) throw new Error(payload.error || "YT render failed");
+    await pollYtRender(payload.job.id, btn, note, progressBar);
+  } catch (error) {
+    btn.disabled = false;
+    btn.textContent = "โหลด";
+    note.textContent = error.message;
+    progressBar.classList.add("error");
+  }
+}
+
+async function pollYtRender(jobId, btn, note, progressBar) {
+  const res = await fetch(apiUrl(`/api/yt-status?id=${encodeURIComponent(jobId)}`));
+  const payload = await res.json();
+  if (!res.ok) throw new Error(payload.error || "YT status failed");
+  const job = payload.job;
+
+  if (job.status === "done") {
+    const link = document.createElement("a");
+    link.className = "download";
+    link.href = apiUrl(job.downloadPath);
+    link.textContent = "ดาวน์โหลด";
+    btn.replaceWith(link);
+    note.textContent = "พร้อมแล้ว";
+    progressBar.hidden = false;
+    progressBar.querySelector("span").style.width = "100%";
+    return;
+  }
+
+  if (job.status === "error") {
+    btn.disabled = false;
+    btn.textContent = "โหลด";
+    note.textContent = job.message || "ล้มเหลว";
+    progressBar.classList.add("error");
+    return;
+  }
+
+  const pct = job.progress || 1;
+  btn.textContent = `${pct}%`;
+  note.textContent = job.message || "กำลังดาวน์โหลด...";
+  progressBar.querySelector("span").style.width = `${pct}%`;
+
+  setTimeout(() => {
+    pollYtRender(jobId, btn, note, progressBar).catch((err) => {
+      btn.disabled = false;
+      btn.textContent = "โหลด";
+      note.textContent = err.message;
+      progressBar.classList.add("error");
+    });
+  }, 1500);
+}
 
 updateSourceUrl();
 
