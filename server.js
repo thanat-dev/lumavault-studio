@@ -33,6 +33,41 @@ const ffmpegCandidates = [
   join(homedir(), "AppData", "Local", "Microsoft", "WinGet", "Links", "ffmpeg.exe"),
 ];
 
+const ytdlpCandidates = [
+  "yt-dlp",
+  join(homedir(), "AppData", "Local", "Microsoft", "WinGet", "Links", "yt-dlp.exe"),
+  join(homedir(), "AppData", "Local", "Packages", "PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0", "LocalCache", "local-packages", "Python312", "Scripts", "yt-dlp.exe"),
+  "/usr/local/bin/yt-dlp",
+  "/usr/bin/yt-dlp",
+];
+const ytJobs = new Map();
+
+async function resolveYtDlp() {
+  const { access } = await import("node:fs/promises");
+  for (const bin of ytdlpCandidates) {
+    if (bin === "yt-dlp") {
+      // Try PATH lookup
+      try {
+        await new Promise((resolve, reject) => {
+          const p = spawn(process.platform === "win32" ? "where" : "which", ["yt-dlp"]);
+          p.on("close", (code) => (code === 0 ? resolve() : reject()));
+        });
+        return "yt-dlp";
+      } catch { continue; }
+    }
+    try { await access(bin); return bin; } catch { /* next */ }
+  }
+  return null;
+}
+
+function formatCount(n) {
+  if (!n) return "";
+  if (n >= 1e9) return `${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `${Math.round(n / 1e3)}K`;
+  return `${n}`;
+}
+
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -1085,6 +1120,160 @@ const server = createServer(async (req, res) => {
 
     if (req.method === "GET" && url.pathname === "/api/render-file") {
       serveRenderFile(res, url.searchParams.get("id") || "");
+      return;
+    }
+
+    // ── YouTube: fetch info via yt-dlp ──────────────────────
+    if (req.method === "POST" && url.pathname === "/api/yt-info") {
+      const body = JSON.parse(await collectBody(req, 1024 * 1024));
+      const ytUrl = `${body.url || ""}`.trim();
+      if (!ytUrl.startsWith("http")) {
+        sendJson(res, 400, { error: "กรุณาใส่ YouTube URL ที่ถูกต้อง" });
+        return;
+      }
+      const ytdlp = await resolveYtDlp();
+      if (!ytdlp) {
+        sendJson(res, 503, { error: "yt-dlp ไม่ได้ติดตั้งในเซิร์ฟเวอร์นี้ กรุณาติดตั้ง yt-dlp ก่อน (pip install yt-dlp)" });
+        return;
+      }
+      try {
+        const info = await new Promise((resolve, reject) => {
+          const proc = spawn(ytdlp, ["--dump-json", "--no-playlist", ytUrl]);
+          let out = "";
+          let err = "";
+          proc.stdout.on("data", (d) => (out += d));
+          proc.stderr.on("data", (d) => (err += d));
+          proc.on("close", (code) => {
+            if (code !== 0) { reject(new Error((err.trim().split("\n").pop() || "yt-dlp failed").slice(-300))); return; }
+            try { resolve(JSON.parse(out)); } catch { reject(new Error("Invalid yt-dlp output")); }
+          });
+        });
+
+        const rawFormats = (info.formats || []).filter((f) => f.url && f.ext !== "mhtml");
+        const videoHeights = [...new Set(
+          rawFormats.filter((f) => f.vcodec && f.vcodec !== "none" && f.height).map((f) => f.height),
+        )];
+        const maxH = Math.max(0, ...videoHeights);
+        const heightOptions = [2160, 1440, 1080, 720, 480, 360, 240, 144];
+        const qualityLabels = { 2160: "4K 2160p", 1440: "2K 1440p", 1080: "Full HD 1080p", 720: "HD 720p", 480: "SD 480p", 360: "360p", 240: "240p", 144: "144p" };
+        const formats = heightOptions
+          .filter((h) => maxH > 0 && h <= maxH)
+          .map((h) => ({ id: `${h}`, quality: qualityLabels[h] || `${h}p`, ext: "mp4", size: null, fps: 0, height: h, type: "mp4" }));
+
+        const bestAudio = rawFormats
+          .filter((f) => (!f.vcodec || f.vcodec === "none") && f.acodec && f.acodec !== "none")
+          .sort((a, b) => (b.abr || 0) - (a.abr || 0))[0];
+        formats.push({ id: "audio", quality: `Audio Only${bestAudio?.abr ? ` ${Math.round(bestAudio.abr)}k` : ""}`, ext: "mp3", size: bestAudio?.filesize || null, fps: 0, height: 0, type: "mp3" });
+
+        let contentType = "video";
+        if (info.is_live) contentType = "live";
+        else if (info.duration && info.duration <= 60 && (info.webpage_url || "").includes("/shorts/")) contentType = "shorts";
+
+        const dur = info.duration || 0;
+        const durationStr = dur > 0
+          ? `${Math.floor(dur / 3600) > 0 ? `${Math.floor(dur / 3600)}:` : ""}${String(Math.floor((dur % 3600) / 60)).padStart(2, "0")}:${String(Math.floor(dur % 60)).padStart(2, "0")}`
+          : "";
+
+        const thumbs = info.thumbnails || [];
+        const thumbnail = info.thumbnail || (thumbs.length ? thumbs[thumbs.length - 1].url : "");
+
+        sendJson(res, 200, {
+          ok: true,
+          meta: {
+            title: info.title || "YouTube Video",
+            channel: info.channel || info.uploader || "",
+            duration: durationStr,
+            thumbnail,
+            contentType,
+            viewCount: formatCount(info.view_count),
+            uploadDate: info.upload_date
+              ? `${info.upload_date.slice(0, 4)}-${info.upload_date.slice(4, 6)}-${info.upload_date.slice(6, 8)}`
+              : "",
+          },
+          formats,
+        });
+      } catch (error) {
+        sendJson(res, 502, { error: error.message || "yt-dlp failed" });
+      }
+      return;
+    }
+
+    // ── YouTube: start download job ──────────────────────────
+    if (req.method === "POST" && url.pathname === "/api/yt-render") {
+      const body = JSON.parse(await collectBody(req, 1024 * 1024));
+      const ytUrl    = `${body.url || ""}`.trim();
+      const formatId = `${body.formatId || ""}`.trim();
+      const outType  = body.type === "mp3" ? "mp3" : "mp4";
+      if (!ytUrl.startsWith("http") || !formatId) {
+        sendJson(res, 400, { error: "Missing url or formatId" });
+        return;
+      }
+      const ytdlp = await resolveYtDlp();
+      if (!ytdlp) {
+        sendJson(res, 503, { error: "yt-dlp ไม่ได้ติดตั้งในเซิร์ฟเวอร์นี้" });
+        return;
+      }
+      const id     = randomUUID();
+      const output = join(renderDir, `${id}.${outType}`);
+      const job    = { id, status: "running", progress: 0, message: "กำลังเตรียมดาวน์โหลด...", output, type: outType, downloadPath: `/api/yt-file?id=${id}` };
+      ytJobs.set(id, job);
+
+      let fmtStr;
+      if (outType === "mp3" || formatId === "audio") {
+        fmtStr = "bestaudio/best";
+      } else {
+        const h = parseInt(formatId);
+        fmtStr = !isNaN(h)
+          ? `bestvideo[height<=${h}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=${h}]+bestaudio/best[height<=${h}]`
+          : "bestvideo+bestaudio/best";
+      }
+
+      const args = outType === "mp3"
+        ? ["-f", fmtStr, "-x", "--audio-format", "mp3", "-o", output, "--no-playlist", ytUrl]
+        : ["-f", fmtStr, "--merge-output-format", "mp4", "-o", output, "--no-playlist", ytUrl];
+
+      const proc = spawn(ytdlp, args);
+      proc.stdout.on("data", (d) => {
+        const line = `${d}`;
+        const m = line.match(/(\d+\.?\d*)%/);
+        if (m) job.progress = Math.min(99, Math.round(Number(m[1])));
+        const s = line.match(/at\s+([\d.]+\s*\w+\/s)/i);
+        if (s) job.message = `Downloading ${s[1]}`;
+      });
+      proc.stderr.on("data", (d) => { job.message = `${d}`.trim().slice(-120); });
+      proc.on("close", (code) => {
+        if (code === 0 && existsSync(output)) { job.status = "done"; job.progress = 100; job.message = "เสร็จสิ้น"; }
+        else { job.status = "error"; job.message = job.message || "yt-dlp ล้มเหลว"; }
+      });
+
+      sendJson(res, 200, { job: { id: job.id, status: job.status } });
+      return;
+    }
+
+    // ── YouTube: poll status ─────────────────────────────────
+    if (req.method === "GET" && url.pathname === "/api/yt-status") {
+      const job = ytJobs.get(url.searchParams.get("id") || "");
+      if (!job) { sendJson(res, 404, { error: "Job not found" }); return; }
+      sendJson(res, 200, { job: { id: job.id, status: job.status, progress: job.progress, message: job.message, downloadPath: job.status === "done" ? job.downloadPath : undefined } });
+      return;
+    }
+
+    // ── YouTube: serve downloaded file ───────────────────────
+    if (req.method === "GET" && url.pathname === "/api/yt-file") {
+      const job = ytJobs.get(url.searchParams.get("id") || "");
+      if (!job || job.status !== "done" || !existsSync(job.output)) {
+        sendJson(res, 404, { error: "File not ready" });
+        return;
+      }
+      const size = statSync(job.output).size;
+      res.writeHead(200, {
+        ...corsHeaders(),
+        "content-type": job.type === "mp3" ? "audio/mpeg" : "video/mp4",
+        "content-length": size,
+        "content-disposition": `attachment; filename="youtube-${job.id}.${job.type}"`,
+        "cache-control": "no-store",
+      });
+      createReadStream(job.output).pipe(res);
       return;
     }
 
