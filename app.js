@@ -872,7 +872,9 @@ async function ytAnalyze() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ url: ytUrl }),
     });
-    const data = await response.json();
+    let data;
+    try { data = await response.json(); }
+    catch { throw new Error("เซิร์ฟเวอร์ยังไม่รองรับ YouTube — กรุณา deploy server.js ใหม่"); }
     if (!response.ok) throw new Error(data.error || "yt-dlp analyze failed");
     finishInline(true);
     renderYTResult(data);
