@@ -7,12 +7,13 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="thai-circuit" aria-hidden="true"></div>
-    <div class="thai-pattern-field" aria-hidden="true"></div>
-    <div class="kanok-ribbon ribbon-top" aria-hidden="true"></div>
-    <div class="kanok-ribbon ribbon-bottom" aria-hidden="true"></div>
-    <div class="gold-ornament ornament-left" aria-hidden="true"></div>
-    <div class="gold-ornament ornament-right" aria-hidden="true"></div>
+    <!-- Decorative Thai Kanok elements -->
+    <div class="side-kanok-left"  aria-hidden="true"></div>
+    <div class="side-kanok-right" aria-hidden="true"></div>
+    <div class="bottom-kanok"     aria-hidden="true"></div>
+    <div class="corner-ornament corner-tl" aria-hidden="true"></div>
+    <div class="corner-ornament corner-tr" aria-hidden="true"></div>
+    <div class="corner-ornament corner-br" aria-hidden="true"></div>
 
     <nav class="navbar">
       <div class="nav-inner">
@@ -33,12 +34,15 @@
           <span>Private Media</span>
           <span>Thai Fine Art Engine</span>
         </div>
-        <h1 id="appTitle">ดาวน์โหลดและ Render วิดีโอส่วนตัว</h1>
+        <h1 id="appTitle"><span class="h1-gold">ดาวน์โหลด</span>และ Render<br>วิดีโอส่วนตัว</h1>
         <p>เครื่องมือสกัดลิงก์และ Render ไฟล์วิดีโอจาก source ที่คุณเข้าถึงได้ ออกแบบใหม่ด้วยโทน White Gold ลายไทยวิจิตรศิลป์ และเส้นวงจรแบบ High-Tech</p>
+        <div class="hero-rule" aria-hidden="true"><span>✦</span></div>
       </section>
 
       <form class="workspace" id="extractForm">
         <section class="input-panel" aria-label="ข้อมูลวิดีโอ">
+          <div class="kanok-corner"    aria-hidden="true"></div>
+          <div class="kanok-corner kanok-corner-bl" aria-hidden="true"></div>
           <div class="panel-header">
             <span>ข้อมูลต้นทาง</span>
             <span id="status" class="status">พร้อมใช้งาน</span>
@@ -80,6 +84,8 @@
         </section>
 
         <section class="result-panel" id="resultPanel" aria-live="polite" hidden>
+          <div class="kanok-corner"    aria-hidden="true"></div>
+          <div class="kanok-corner kanok-corner-bl" aria-hidden="true"></div>
           <div class="panel-header">
             <span>ผลลัพธ์</span>
             <span>พร้อมส่งออก</span>
