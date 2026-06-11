@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Open Facebook Source - LumaVault</title>
+    <title>Source Helper — LumaVault</title>
     <style>
       :root {
         --ink: #14212d;
@@ -12,17 +12,17 @@
         --gold-soft: #f7e8bd;
         --line: rgba(185, 135, 23, 0.34);
         --teal: #008b87;
+        --green: #16a34a;
+        --green-soft: #f0fdf4;
       }
 
-      * {
-        box-sizing: border-box;
-      }
+      * { box-sizing: border-box; }
 
       body {
         min-height: 100vh;
         margin: 0;
         display: grid;
-        place-items: center;
+        place-items: start center;
         padding: 24px;
         background:
           linear-gradient(90deg, rgba(185, 135, 23, 0.08) 1px, transparent 1px),
@@ -35,11 +35,12 @@
       }
 
       main {
-        width: min(840px, 100%);
+        width: min(760px, 100%);
+        margin-top: 16px;
         border: 1px solid var(--line);
         border-radius: 18px;
-        padding: 28px;
-        background: rgba(255, 255, 255, 0.82);
+        padding: 28px 32px 32px;
+        background: rgba(255, 255, 255, 0.88);
         box-shadow: 0 26px 70px rgba(20, 33, 45, 0.12);
       }
 
@@ -47,93 +48,206 @@
         display: flex;
         align-items: center;
         gap: 12px;
-        margin-bottom: 22px;
-        font-weight: 950;
+        margin-bottom: 20px;
+        font-size: 13px;
+        font-weight: 900;
         letter-spacing: 0.08em;
         text-transform: uppercase;
+        color: #7a5200;
       }
 
       .mark {
         display: grid;
-        width: 44px;
-        height: 44px;
+        width: 38px;
+        height: 38px;
         place-items: center;
         border: 1px solid var(--line);
-        border-radius: 10px;
+        border-radius: 9px;
         background: linear-gradient(135deg, #fff, var(--gold-soft));
+        font-size: 13px;
+        font-weight: 950;
         color: #6c4700;
+        flex-shrink: 0;
       }
 
       h1 {
-        margin: 0 0 8px;
-        font-size: clamp(28px, 5vw, 54px);
-        line-height: 1;
+        margin: 0 0 6px;
+        font-size: clamp(22px, 4vw, 36px);
+        line-height: 1.1;
       }
 
-      p {
-        margin: 0 0 18px;
+      .subtitle {
+        margin: 0 0 24px;
         color: var(--muted);
-        line-height: 1.65;
+        font-size: 14px;
+        line-height: 1.6;
       }
 
-      .panel {
+      /* Steps */
+      .steps { display: grid; gap: 14px; }
+
+      .step {
         display: grid;
+        grid-template-columns: 36px 1fr;
         gap: 12px;
-        margin-top: 22px;
+        align-items: start;
+        padding: 14px 16px;
+        border: 1px solid rgba(185, 135, 23, 0.2);
+        border-radius: 14px;
+        background: rgba(255, 252, 244, 0.6);
+        transition: border-color 0.2s, background 0.2s;
       }
 
-      label {
-        font-weight: 900;
+      .step.active {
+        border-color: rgba(0, 139, 135, 0.35);
+        background: rgba(240, 255, 255, 0.7);
       }
 
-      input {
-        width: 100%;
-        min-height: 54px;
-        border: 1px solid rgba(0, 139, 135, 0.24);
-        border-radius: 12px;
-        padding: 0 16px;
-        color: var(--ink);
-        font: 14px/1.4 Consolas, "Courier New", monospace;
+      .step.done {
+        border-color: rgba(22, 163, 74, 0.3);
+        background: var(--green-soft);
+        opacity: 0.8;
       }
 
-      .actions {
+      .step-num {
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--gold-soft);
+        border: 1px solid rgba(185, 135, 23, 0.3);
+        font-weight: 950;
+        font-size: 14px;
+        color: #7a5200;
+        flex-shrink: 0;
+      }
+
+      .step.active .step-num {
+        background: rgba(0, 139, 135, 0.12);
+        border-color: rgba(0, 139, 135, 0.4);
+        color: var(--teal);
+      }
+
+      .step.done .step-num {
+        background: rgba(22, 163, 74, 0.12);
+        border-color: rgba(22, 163, 74, 0.3);
+        color: var(--green);
+      }
+
+      .step-body { min-width: 0; }
+
+      .step-body strong {
+        display: block;
+        font-size: 14px;
+        margin-bottom: 4px;
+      }
+
+      .step-body p {
+        margin: 0;
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      /* URL row */
+      .url-row {
         display: flex;
+        gap: 8px;
+        margin-top: 8px;
         flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 12px;
       }
 
-      button,
-      a {
+      input[type="text"] {
+        flex: 1;
+        min-width: 0;
+        min-height: 44px;
+        border: 1px solid rgba(0, 139, 135, 0.28);
+        border-radius: 10px;
+        padding: 0 14px;
+        color: var(--ink);
+        font: 13px/1.4 Consolas, "Courier New", monospace;
+        background: #fff;
+      }
+
+      button {
         min-height: 44px;
         border: 1px solid var(--line);
         border-radius: 10px;
-        padding: 0 16px;
+        padding: 0 18px;
         display: inline-grid;
         place-items: center;
         background: #fffaf0;
         color: #7a5200;
         cursor: pointer;
         font-weight: 950;
-        text-decoration: none;
+        font-size: 13px;
+        white-space: nowrap;
+        transition: background 0.15s, border-color 0.15s;
       }
 
-      .primary {
-        border-color: rgba(0, 139, 135, 0.28);
-        background: #f4ffff;
+      button:hover { background: var(--gold-soft); }
+
+      button.primary {
+        border-color: rgba(0, 139, 135, 0.35);
+        background: rgba(0, 139, 135, 0.07);
         color: var(--teal);
       }
 
-      .steps {
-        margin-top: 18px;
-        padding: 16px;
-        border: 1px solid rgba(185, 135, 23, 0.22);
-        border-radius: 14px;
-        background: rgba(255, 252, 244, 0.74);
+      button.primary:hover { background: rgba(0, 139, 135, 0.14); }
+
+      /* Paste area */
+      #pasteArea {
+        display: block;
+        width: 100%;
+        min-height: 130px;
+        margin-top: 10px;
+        border: 2px dashed rgba(0, 139, 135, 0.35);
+        border-radius: 12px;
+        padding: 14px;
+        font: 13px/1.5 Consolas, "Courier New", monospace;
+        color: var(--ink);
+        background: rgba(240, 255, 255, 0.5);
+        resize: vertical;
+        transition: border-color 0.2s, background 0.2s;
       }
 
-      .steps strong {
-        color: #7a5200;
+      #pasteArea:focus {
+        outline: none;
+        border-color: var(--teal);
+        background: #fff;
+      }
+
+      #pasteArea.has-content {
+        border-style: solid;
+        border-color: rgba(22, 163, 74, 0.4);
+        background: var(--green-soft);
+      }
+
+      /* Success banner */
+      #successBanner {
+        display: none;
+        margin-top: 16px;
+        padding: 14px 18px;
+        border: 1px solid rgba(22, 163, 74, 0.35);
+        border-radius: 14px;
+        background: var(--green-soft);
+        color: var(--green);
+        font-weight: 900;
+        font-size: 15px;
+        text-align: center;
+      }
+
+      #successBanner.visible { display: block; }
+
+      kbd {
+        display: inline-block;
+        padding: 1px 6px;
+        border: 1px solid rgba(20, 33, 45, 0.2);
+        border-radius: 5px;
+        background: #f3f4f6;
+        font: 12px/1.6 Consolas, monospace;
+        color: var(--ink);
       }
     </style>
   </head>
@@ -141,27 +255,61 @@
     <main>
       <div class="brand">
         <div class="mark">LV</div>
-        <div>LumaVault Source Helper</div>
+        <span>LumaVault Source Helper</span>
       </div>
+
       <h1>เปิด Page Source</h1>
-      <p>
-        Chrome ไม่อนุญาตให้เว็บเปิด <strong>view-source:</strong> อัตโนมัติได้เสมอ
-        หน้านี้จึงเตรียมลิงก์ให้พร้อมใช้งานแบบไม่หลุดขั้นตอน
+      <p class="subtitle">
+        ทำตามขั้นตอน 1–4 — เมื่อวาง Source แล้ว ระบบจะส่งกลับ LumaVault ให้อัตโนมัติ
       </p>
 
-      <section class="panel">
-        <label for="sourceLink">ลิงก์ Source ที่ต้องเปิด</label>
-        <input id="sourceLink" readonly />
-        <div class="actions">
-          <button class="primary" id="copySource" type="button">คัดลอก Source URL</button>
-          <a id="tryOpen" href="#" target="_blank" rel="noopener">ลองเปิด view-source</a>
-          <a id="openOriginal" href="#" target="_blank" rel="noopener">เปิดลิงก์วิดีโอเดิม</a>
-        </div>
-      </section>
-
       <div class="steps">
-        <p><strong>วิธีที่แน่นอนที่สุด:</strong> กดคัดลอก Source URL แล้ววางใน address bar ของแท็บนี้หรือแท็บใหม่ จากนั้นกด Enter</p>
-        <p>เมื่อเห็นหน้า source แล้วกด Ctrl+A / Ctrl+C แล้วกลับไปที่ LumaVault เพื่อกด วาง Clipboard</p>
+
+        <!-- Step 1 -->
+        <div class="step" id="s1">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>คัดลอก Source URL</strong>
+            <div class="url-row">
+              <input id="sourceLink" type="text" readonly />
+              <button class="primary" id="copySource" type="button">คัดลอก</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step" id="s2">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>เปิดแท็บใหม่ → วาง URL → <kbd>Enter</kbd></strong>
+            <p>กด <kbd>Ctrl+T</kbd> เปิดแท็บใหม่ใน Chrome แล้ววาง URL จากขั้นตอนที่ 1 ลงใน address bar แล้วกด Enter<br>
+            (Chrome ไม่อนุญาตให้เว็บเปิด <code>view-source:</code> อัตโนมัติ จึงต้องทำเองใน address bar)</p>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step" id="s3">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>กด <kbd>Ctrl+A</kbd> แล้ว <kbd>Ctrl+C</kbd></strong>
+            <p>ในแท็บ view-source ที่เปิดได้ กด Ctrl+A เพื่อเลือกทั้งหมด แล้ว Ctrl+C เพื่อคัดลอก</p>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="step active" id="s4">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>กลับมาวาง Source ที่นี่ (<kbd>Ctrl+V</kbd>)</strong>
+            <p>คลิกในกล่องด้านล่างแล้วกด Ctrl+V — ระบบจะส่งกลับ LumaVault ให้เองทันที</p>
+            <textarea id="pasteArea" placeholder="วาง Source ทั้งหน้าที่นี่ (Ctrl+V)…" spellcheck="false"></textarea>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="successBanner">
+        ✓ ส่ง Source กลับ LumaVault แล้ว — ปิดแท็บนี้ได้เลย
       </div>
     </main>
 
@@ -169,30 +317,64 @@
       const params = new URLSearchParams(location.search);
       const rawUrl = params.get("url") || "";
       const cleanUrl = rawUrl.replace(/^(view-source:)+/i, "").trim();
-      const sourceUrl = cleanUrl ? `view-source:${cleanUrl}` : "";
-      const sourceInput = document.querySelector("#sourceLink");
-      const copyButton = document.querySelector("#copySource");
-      const tryOpen = document.querySelector("#tryOpen");
-      const openOriginal = document.querySelector("#openOriginal");
+      const viewSourceUrl = cleanUrl ? `view-source:${cleanUrl}` : "";
 
-      sourceInput.value = sourceUrl;
-      tryOpen.href = sourceUrl || "#";
-      openOriginal.href = cleanUrl || "#";
+      const sourceInput = document.getElementById("sourceLink");
+      const copyBtn = document.getElementById("copySource");
+      const pasteArea = document.getElementById("pasteArea");
+      const successBanner = document.getElementById("successBanner");
 
+      sourceInput.value = viewSourceUrl;
+
+      // Auto-select the URL on load for easy keyboard copy
       requestAnimationFrame(() => {
         sourceInput.focus();
         sourceInput.select();
       });
 
-      copyButton.addEventListener("click", async () => {
+      // Copy button
+      copyBtn.addEventListener("click", async () => {
         sourceInput.focus();
         sourceInput.select();
         try {
-          await navigator.clipboard.writeText(sourceUrl);
-          copyButton.textContent = "คัดลอกแล้ว";
+          await navigator.clipboard.writeText(viewSourceUrl);
+          copyBtn.textContent = "คัดลอกแล้ว ✓";
+          setTimeout(() => { copyBtn.textContent = "คัดลอก"; }, 2000);
         } catch {
           document.execCommand("copy");
-          copyButton.textContent = "เลือกไว้แล้ว กด Ctrl+C";
+          copyBtn.textContent = "เลือกแล้ว — กด Ctrl+C";
+          setTimeout(() => { copyBtn.textContent = "คัดลอก"; }, 2500);
+        }
+        document.getElementById("s1").classList.add("done");
+      });
+
+      // BroadcastChannel to send source back to the main LumaVault tab
+      const channel = new BroadcastChannel("lumavault-source");
+
+      function sendSource(content) {
+        channel.postMessage({ type: "source-content", content });
+        pasteArea.classList.add("has-content");
+        successBanner.classList.add("visible");
+        const kb = Math.max(1, Math.round(content.length / 1024));
+        successBanner.textContent = `✓ ส่ง Source กลับ LumaVault แล้ว (${kb} KB) — ปิดแท็บนี้ได้เลย`;
+        document.getElementById("s4").classList.remove("active");
+        document.getElementById("s4").classList.add("done");
+      }
+
+      // Detect paste into the textarea
+      pasteArea.addEventListener("paste", (event) => {
+        const content = (event.clipboardData || window.clipboardData).getData("text");
+        if (content && content.trim().length > 50) {
+          // Let the browser fill the textarea normally, then broadcast
+          requestAnimationFrame(() => sendSource(content));
+        }
+      });
+
+      // Also handle manual typing / late paste detection
+      pasteArea.addEventListener("input", () => {
+        const content = pasteArea.value;
+        if (content.trim().length > 50 && !successBanner.classList.contains("visible")) {
+          sendSource(content);
         }
       });
     </script>
