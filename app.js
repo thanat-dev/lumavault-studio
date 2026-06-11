@@ -541,11 +541,108 @@ function render(payload) {
   renderRows(payload);
 }
 
+// ── Analyze Progress Overlay ────────────────────────────────
+const _overlayEl = (() => {
+  const el = document.createElement("div");
+  el.className = "analyze-overlay";
+  el.id = "analyzeOverlay";
+  el.setAttribute("aria-live", "polite");
+  el.setAttribute("aria-atomic", "true");
+  el.hidden = true;
+  el.innerHTML = `
+    <div class="overlay-card">
+      <div class="kanok-spinner" aria-hidden="true"></div>
+      <h2 class="overlay-title">กำลังวิเคราะห์วิดีโอ</h2>
+      <div class="overlay-progress-track">
+        <div class="overlay-fill" id="_oFill" style="width:0%"></div>
+      </div>
+      <div class="overlay-pct" id="_oPct">0%</div>
+      <p class="overlay-msg" id="_oMsg">กำลังเตรียมการ...</p>
+      <div class="overlay-dots" id="_oDots" aria-hidden="true"></div>
+    </div>`;
+  document.body.appendChild(el);
+  return el;
+})();
+
+const _stages = [
+  "กำลังตรวจสอบ Source HTML...",
+  "วิเคราะห์โครงสร้างหน้า Facebook...",
+  "สกัดลิงก์สื่อจาก HTML...",
+  "ตรวจสอบและกรองลิงก์วิดีโอ...",
+  "ประมวลผล Meta & ข้อมูลคุณภาพ...",
+  "จัดเรียงผลลัพธ์...",
+];
+const _stagePcts = [12, 28, 46, 63, 79, 91];
+let _oTimer = null;
+let _oPct = 0;
+let _oStageIdx = 0;
+
+function _setDots(active) {
+  _stages.forEach((_, i) => {
+    const d = document.getElementById(`_od${i}`);
+    if (!d) return;
+    d.className = i < active ? "o-dot done" : i === active ? "o-dot active" : "o-dot";
+  });
+}
+
+function startOverlay() {
+  const fill = document.getElementById("_oFill");
+  const pct  = document.getElementById("_oPct");
+  const msg  = document.getElementById("_oMsg");
+  const dots = document.getElementById("_oDots");
+  _oPct = 0; _oStageIdx = 0;
+  if (fill) fill.style.width = "0%";
+  if (pct)  pct.textContent  = "0%";
+  if (msg)  msg.textContent  = "กำลังเตรียมการ...";
+  if (dots) {
+    dots.replaceChildren();
+    _stages.forEach((_, i) => {
+      const d = document.createElement("div");
+      d.className = "o-dot"; d.id = `_od${i}`; dots.appendChild(d);
+    });
+  }
+  _overlayEl.hidden = false;
+  clearInterval(_oTimer);
+  _oTimer = setInterval(() => {
+    const target = _stagePcts[_oStageIdx] ?? 92;
+    _oPct += (_oPct < target - 2) ? (Math.random() * 1.8 + 0.4) : 0.15;
+    _oPct = Math.min(_oPct, target);
+    if (_oPct >= target - 0.5 && _oStageIdx < _stages.length - 1) {
+      _oStageIdx++;
+      const msgEl = document.getElementById("_oMsg");
+      if (msgEl) {
+        msgEl.style.opacity = "0";
+        setTimeout(() => { msgEl.textContent = _stages[_oStageIdx - 1]; msgEl.style.opacity = "1"; }, 160);
+      }
+      _setDots(_oStageIdx);
+    }
+    if (fill) fill.style.width = `${Math.min(_oPct, 93)}%`;
+    if (pct)  pct.textContent  = `${Math.round(Math.min(_oPct, 93))}%`;
+  }, 140);
+}
+
+function finishOverlay(success = true) {
+  clearInterval(_oTimer);
+  const fill = document.getElementById("_oFill");
+  const pct  = document.getElementById("_oPct");
+  const msg  = document.getElementById("_oMsg");
+  if (fill) { fill.style.width = "100%"; fill.classList.toggle("error", !success); }
+  if (pct)  pct.textContent  = success ? "100%" : "—";
+  if (msg)  msg.textContent  = success ? "✓ วิเคราะห์เสร็จสิ้น!" : "เกิดข้อผิดพลาด";
+  _setDots(success ? _stages.length : _oStageIdx);
+  setTimeout(() => {
+    _overlayEl.hidden = true;
+    if (fill) { fill.classList.remove("error"); fill.style.width = "0%"; }
+    _oPct = 0; _oStageIdx = 0;
+  }, success ? 650 : 1400);
+}
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const submit = form.querySelector("button[type='submit']");
   submit.disabled = true;
   setStatus("กำลังวิเคราะห์");
+  startOverlay();
 
   try {
     let sourceValue = source.value;
@@ -563,9 +660,11 @@ form.addEventListener("submit", async (event) => {
     });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error || "Analyze failed");
+    finishOverlay(true);
     render(payload);
     setStatus((payload.items || []).some(isClientUsable) ? "พบไฟล์ที่ใช้งานได้" : "ไม่พบไฟล์ที่ดาวน์โหลดได้");
   } catch (error) {
+    finishOverlay(false);
     resultPanel.hidden = false;
     videoCard.replaceChildren();
     resultsEl.innerHTML = `<div class="table-empty">${error.message}</div>`;
