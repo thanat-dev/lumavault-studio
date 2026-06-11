@@ -42,6 +42,17 @@ const ytdlpCandidates = [
 ];
 const ytJobs = new Map();
 const ytdlpInfoTimeoutMs = 70000;
+const ytdlpNetworkArgs = [
+  "--socket-timeout",
+  "20",
+  "--retries",
+  "1",
+  "--extractor-retries",
+  "1",
+  "--force-ipv4",
+  "--extractor-args",
+  "youtube:player_client=web",
+];
 
 async function resolveYtDlp() {
   const { access } = await import("node:fs/promises");
@@ -1190,11 +1201,7 @@ const server = createServer(async (req, res) => {
           "--ignore-config",
           "--dump-json",
           "--no-playlist",
-          "--socket-timeout",
-          "20",
-          "--retries",
-          "2",
-          "--force-ipv4",
+          ...ytdlpNetworkArgs,
           ytUrl,
         ], ytdlpInfoTimeoutMs);
         let info;
@@ -1280,8 +1287,8 @@ const server = createServer(async (req, res) => {
       }
 
       const args = outType === "mp3"
-        ? ["--ignore-config", "-f", fmtStr, "-x", "--audio-format", "mp3", "--socket-timeout", "20", "--retries", "2", "--force-ipv4", "-o", output, "--no-playlist", ytUrl]
-        : ["--ignore-config", "-f", fmtStr, "--merge-output-format", "mp4", "--socket-timeout", "20", "--retries", "2", "--force-ipv4", "-o", output, "--no-playlist", ytUrl];
+        ? ["--ignore-config", "-f", fmtStr, "-x", "--audio-format", "mp3", ...ytdlpNetworkArgs, "-o", output, "--no-playlist", ytUrl]
+        : ["--ignore-config", "-f", fmtStr, "--merge-output-format", "mp4", ...ytdlpNetworkArgs, "-o", output, "--no-playlist", ytUrl];
 
       const proc = spawn(ytdlp, args);
       proc.stdout.on("data", (d) => {
